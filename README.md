@@ -12,8 +12,13 @@ The following libraries are used in this sketch and are available in the /lib fo
 The original repositories are linked below:
 
 Dusk2Dawn (https://github.com/dmkishi/Dusk2Dawn) to calculate the sunrise/sunset based on date/time and coordinates.
+
 RTClib (https://github.com/adafruit/RTClib) to interface to the DS3231 RTC module.
+
 LiquidCrystal_I2C (https://github.com/johnrickman/LiquidCrystal_I2C) for the LCD module.
+
 Button (https://github.com/JChristensen/Button) a pushbutton library (additional functions over the standard Arduino lib).
+
 TimedAction (https://github.com/Glumgad/TimedAction) to run a function at a specified interval.
+
 EEPROMEx (https://github.com/thijse/Arduino-EEPROMEx) an extended EEPROM library.
