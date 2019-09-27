@@ -1,0 +1,53 @@
+2018-08-09
+Pacificon Light Timer LCD Screens
+1602 LCD (16 characters, 2 lines)
+at least 1 LED for on/off status, "settings" mode, error
+4 buttons: left/right/up/down
+See "alarmClock" for details on the menu system...
+Press ANY button once to turn on backlight.
+
+UP/DOWN can scroll through screens when NOT in "settings" mode.
+
+RIGHT will initiate "settings" mode
+LEFT/RIGHT selects the character to change
+UP/DOWN changes the value
+LEFT all the way to the left will CANCEL
+RIGHT all the way to the right will SAVE CHANGES
+
+
+
+  0123456789012345	<-- Character number
+0					<-- Line 0
+1					<-- Line 1
+
+Main Screen - Current date/time, status
+  0123456789012345
+0 Thu, Aug 9, 2018	# read-only
+1 12:16 PDT    OFF	# writable (time, and manual on/off)
+
+Oct.27
+------------------
+  0123456789012345
+0 Aug.09 @ 01:23 D
+1 Rs01:23  St01:23
+
+  0123456789012345
+0 Off:Sunrise +01m
+1 On :Sunset  -01m
+------------------
+
+Today's sunrise/sunset
+  0123456789012345
+0 Sunrise :  05:55	# read-only
+1  Sunset :  20:39	# read-only
+
+Current setting
+  0123456789012345
+0 Off Time : 06:25	# writable
+1  On Time : 20:09	# writable
+
+Display sunrise/sunset for given date (not necessary. maybe cool)
+  0123456789012345
+0 Thu, Aug 9, 2018	# writable
+1 R:05:55  S:20:39	# read-only
+
