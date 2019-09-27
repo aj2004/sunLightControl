@@ -1,3 +1,5 @@
+#line 1 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+#line 1 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 /* 2018-08-09
  * 
  * 
@@ -145,7 +147,7 @@
 
 
 
-struct boolByte
+typedef struct
 {
     bool screen:1;
     bool lcdFading:1;
@@ -155,7 +157,7 @@ struct boolByte
     bool var5:1;
     bool var6:1;
     bool var7:1;
-}__attribute__((packed));
+}__attribute__((packed)) boolByte;
 // make a new variable of type "boolByte"
 // address each member like so: bools.screen = 0;
 boolByte bools;
@@ -241,8 +243,6 @@ LiquidCrystal_I2C lcd(0x27, LCD_COLUMNS, LCD_ROWS);
 PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
 
 PWM_RampLinear LED_R_Ramp(9);
-
-//TODO
 bool test_flash = false;
 
 
@@ -305,6 +305,8 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 ///////////////////////////////////////////////
 
 
+// Call this function to return a 1 if Daylight-Savings Time is active, 0 if not.
+bool isDST(int month, int day, int dow);
 bool burnabyDST;
 bool burnabyDST_last;
 
@@ -367,6 +369,11 @@ void outputRelay(void);
  * 
  */
 
+#line 370 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+void setup();
+#line 477 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+void loop();
+#line 370 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 void setup() {
 
   #ifdef DEBUG 
@@ -417,7 +424,6 @@ void setup() {
   digitalWrite(PIN_LED_L, LOW);
 
   #ifdef DEBUG
-    //TODO
     pinMode(9, OUTPUT);
   #endif
 
@@ -482,7 +488,6 @@ void loop() {
   //------ Read Inputs ------//
   //-------------------------//
 
-  // Grab the stored Offsets from EEPROM
   burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
   burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
 
@@ -651,6 +656,27 @@ void loop() {
 ////////////////////////////////////////////////
 //  8. FUNCTION PROTOTYPES                    //
 ////////////////////////////////////////////////
+
+
+bool isDST(int month, int day, int dow){
+
+  /* This function will return 1 or 0 depending on whether
+   * Daylight Savings Time is in effect for the provided date
+   */
+
+  // 'dow' must be 0=Sunday - 6=Saturday
+  int prevSunday = day - dow;
+  // if it is April-October inclusive, it's DST
+  if (month > 3 && month < 11){return true;}
+  // if it's March and it is later than the 2nd Sunday, it's DST
+  else if (month == 3){return prevSunday >= 8;}
+  // if it's November and it's earlier than the first Sunday, it's DST
+  else if (month == 11){return prevSunday <= 0;}
+  // otherwise it's not DST
+  else return 0;
+}
+
+
 
 
 void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation){
@@ -940,4 +966,5 @@ void outputSerialDebug(void){
     
   
 }
+
 

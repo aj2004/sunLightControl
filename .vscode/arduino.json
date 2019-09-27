@@ -1,7 +1,7 @@
 {
     "port": "/dev/ttyUSB0",
     "board": "arduino:avr:nano",
-    "sketch": "pcsLightTimer.ino",
+    "sketch": "sunLightControl.ino",
     "output": "./build",
     "configuration": "cpu=atmega328old"
 }

@@ -1,3 +1,5 @@
+# 1 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+# 1 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 /* 2018-08-09
  * 
  * 
@@ -32,15 +34,15 @@
 ///////////////////////////////////////////////
 //  1. INCLUDED LIBRARIES                    //
 ///////////////////////////////////////////////
-#include <Arduino.h>
-#include <Dusk2Dawn.h>
-#include <RTClib.h>
-#include <LiquidCrystal_I2C.h>
-#include <Button.h>
-#include <TimedAction.h>
-#include <EEPROM.h>
-#include "PWM_RampLinear.h"
-#include "isDST_Canada.h"
+# 36 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 37 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 38 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 39 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 40 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 41 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 42 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 43 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
+# 44 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino" 2
 
 
 
@@ -62,77 +64,53 @@
 // Comment out the following line to disable debugging. (put // on the left)
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define DEBUG
-
-#ifdef DEBUG
-  #define SERIAL_BAUD 115200
-#endif
-
-#define LCD_COLUMNS 20
-#define LCD_ROWS 4
-
+# 74 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 // Setup the pushbutton pins here.
-#define PIN_PB_UP     A0
-#define PIN_PB_DOWN   A1
-#define PIN_PB_LEFT   A2
-#define PIN_PB_RIGHT  A3
-#define PIN_PB_ENTER  12
+
+
+
+
+
 // How long (in milliseconds) to hold a PB before it repeats its function?
-#define REPEAT_MS     300
+
 
 // Setup the relay pin here
-#define PIN_RELAY 8
+
 
 // Setup the LED pins here.
 // The RGB LED should be wired to pins 3,5,6,9,10,11
 // These are the hardware PWM pins.
-#define PIN_LED_R 3
-#define PIN_LED_G 10
-#define PIN_LED_B 11
+
+
+
 // This LED is on the Arduino circuit board, hard-wired to pin 13.
-#define PIN_LED_L 13
+
 // Set the LCD backlight pin here.
-#define PIN_LCD_A  6
+
+
+
+
+
+// Don't change these values
 
 
 
 
 // Don't change these values
-#define RED   255, 000, 000
-#define GREEN 000, 255, 000
-#define BLUE  000, 000, 255
 
-// Don't change these values
-#define SOLID 1
-#define FLASH_BLIP 2
-#define FLASH_SLOW 3
-#define FLASH_FAST 4
+
+
+
 
 // Lamp Flash times, in milliseconds
-#define FLASH_BLIP_ON 100
-#define FLASH_BLIP_OFF 1750
-
-#define FLASH_SLOW_ON 900
-#define FLASH_SLOW_OFF 900
-
-#define FLASH_FAST_ON 300
-#define FLASH_FAST_OFF 300
-
+# 121 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 // These values shouldn't need to be modified
-#define BURNABY_LATITUDE 49.2488
-#define BURNABY_LONGITUDE -122.9805
-#define BURNABY_UTC_OFFSET -8
+
+
+
 
 // These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
-#define ADDR_SUNRISE_OFFSET 0
-#define ADDR_SUNSET_OFFSET 1
-
-
-
-
-
-
-
+# 136 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  3. GLOBAL VARIABLES                      //
 ///////////////////////////////////////////////
@@ -145,7 +123,7 @@
 
 
 
-struct boolByte
+typedef struct
 {
     bool screen:1;
     bool lcdFading:1;
@@ -155,7 +133,7 @@ struct boolByte
     bool var5:1;
     bool var6:1;
     bool var7:1;
-}__attribute__((packed));
+}__attribute__((packed)) boolByte;
 // make a new variable of type "boolByte"
 // address each member like so: bools.screen = 0;
 boolByte bools;
@@ -198,7 +176,7 @@ struct two_nibbles
 
 two_nibbles cursorPos;
 
-#ifdef DEBUG
+
   // This timer is for serial debugging updates.
   // Change the value of interval_Serial to the refresh rate, in milliseconds.
   long prevTime_Serial = 0;
@@ -210,22 +188,14 @@ two_nibbles cursorPos;
   uint32_t scanTimeCurr = 0;
   uint32_t scanTimePrev = 0;
   uint32_t scanTimeAverage = 0;
-
-#endif
-
-
-
-
-
-
-
+# 222 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  4. OBJECT CREATION                       //
 ///////////////////////////////////////////////
 
 /* Create a real-time clock object
  * There are no arguments here.
- */ 
+ */
 RTC_DS3231 rtc;
 // Create a DateTime object. The current date and time are grabbed from this object.
 DateTime now;
@@ -233,16 +203,14 @@ DateTime now;
 /* Create an LCD object.
  * Arguments: I2C address (hex), columns, rows
  */
-LiquidCrystal_I2C lcd(0x27, LCD_COLUMNS, LCD_ROWS);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 /* Create PWM Ramping objects
  * Argument: Pin Number
  */
-PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
+PWM_RampLinear LCD_Backlight_PWM(6);
 
 PWM_RampLinear LED_R_Ramp(9);
-
-//TODO
 bool test_flash = false;
 
 
@@ -279,32 +247,26 @@ bool test_flash = false;
 
 //    |Name  | Pin Number  |Pull Up|Invrt|Debnc|
 //----|------|-------------|-------|-----|-----|
-Button pbUp   (PIN_PB_UP,     true, true, 30);
-Button pbDown (PIN_PB_DOWN,   true, true, 30);
-Button pbLeft (PIN_PB_LEFT,   true, true, 30);
-Button pbRight(PIN_PB_RIGHT,  true, true, 30);
-Button pbEnter(PIN_PB_ENTER,  true, true, 30);
+Button pbUp (A0, true, true, 30);
+Button pbDown (A1, true, true, 30);
+Button pbLeft (A2, true, true, 30);
+Button pbRight(A3, true, true, 30);
+Button pbEnter(12, true, true, 30);
 
 /* Create a Dusk2Dawn object. (for sunrise/sunset times)
  * Arguments: latitude, longitude, UTC offset
  * PST = UTC-8:00
  * 
  */
-Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
-
-
-
-
-
-
-
-
-
+Dusk2Dawn burnaby(49.2488, -122.9805, -8);
+# 301 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  5. FUNCTION DECLARATIONS                 //
 ///////////////////////////////////////////////
 
 
+// Call this function to return a 1 if Daylight-Savings Time is active, 0 if not.
+bool isDST(int month, int day, int dow);
 bool burnabyDST;
 bool burnabyDST_last;
 
@@ -342,21 +304,11 @@ TimedAction outputLCD_action = TimedAction(1000,outputLCD);
 void outputRelay(void);
 
 
-#ifdef DEBUG
+
   // Call this function when DEBUG is enabled to output info to the Serial Port
   void outputSerialDebug(void);
   TimedAction outputSerialDebug_action = TimedAction(2000, outputSerialDebug);
-#endif
-
-
-
-
-
-
-
-
-
-
+# 360 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  6. setup() -- MAIN FUNCTION (runs once)  //
 ///////////////////////////////////////////////
@@ -369,14 +321,14 @@ void outputRelay(void);
 
 void setup() {
 
-  #ifdef DEBUG 
+
     //DEBUG: start serial comms
-    Serial.begin (SERIAL_BAUD);
+    Serial.begin (115200);
       Serial.print("Serial Port is running at ");
-      Serial.print(SERIAL_BAUD);
+      Serial.print(115200);
     Serial.println(" baud.");
-    
-  #endif
+
+
 
   // Setup the Input pins
   /*
@@ -384,92 +336,83 @@ void setup() {
    * The Button library takes care of the pinModes.
    * This code is being left here to make it more obvious. 
    */
-  pinMode(PIN_PB_UP,    INPUT_PULLUP);
-  pinMode(PIN_PB_DOWN,  INPUT_PULLUP);
-  pinMode(PIN_PB_LEFT,  INPUT_PULLUP);
-  pinMode(PIN_PB_RIGHT, INPUT_PULLUP);
-  pinMode(PIN_PB_ENTER, INPUT_PULLUP);
+  pinMode(A0, 0x2);
+  pinMode(A1, 0x2);
+  pinMode(A2, 0x2);
+  pinMode(A3, 0x2);
+  pinMode(12, 0x2);
 
   // Setup the Output pins
   /* 
    * It is recommended to use digitalWrite(PIN, STATE) to put the outputs
    * into a known state before the main loop() begins.
    */
-  pinMode(PIN_RELAY, OUTPUT);
+  pinMode(8, 0x1);
   /* The relay contacts will be wired N.C. so if this program/circuit fails, the original
    *  timer unit (in series with this system) can still control the lights
    * The output is configured as a CURRENT SINK. This "double-negative" means that:
    *  - Setting the output HIGH means the lights will be ON (relay coil is off, NC contacts closed)
    *  - Setting the output LOW means the lights will be OFF (relay coil is on, NC contacts open)
    */
-  digitalWrite(PIN_RELAY, LOW);
-  
+  digitalWrite(8, 0x0);
+
 
   // Setup the LED pins here.
-  pinMode(PIN_LED_R, OUTPUT);
-  digitalWrite(PIN_LED_R, LOW);
-  pinMode(PIN_LED_G, OUTPUT);
-  digitalWrite(PIN_LED_G, LOW);
-  pinMode(PIN_LED_B, OUTPUT);
-  digitalWrite(PIN_LED_B, LOW);
+  pinMode(3, 0x1);
+  digitalWrite(3, 0x0);
+  pinMode(10, 0x1);
+  digitalWrite(10, 0x0);
+  pinMode(11, 0x1);
+  digitalWrite(11, 0x0);
   // And the onboard LED: Labelled 'L'
-  pinMode(PIN_LED_L, OUTPUT);
-  digitalWrite(PIN_LED_L, LOW);
+  pinMode(13, 0x1);
+  digitalWrite(13, 0x0);
 
-  #ifdef DEBUG
-    //TODO
-    pinMode(9, OUTPUT);
-  #endif
+
+    pinMode(9, 0x1);
+
 
 
   // Initialize the LCD & clear any junk left in screen memory
   lcd.init();
   lcd.clear();
   // analogWrite is an 8-bit PWM output
-  analogWrite(PIN_LCD_A, 255);
+  analogWrite(6, 255);
   //set the cursor to 0,0 (top-left)
-  lcd.home();  
+  lcd.home();
 
-  #ifdef DEBUG
+
     //DEBUG: print the location information
     Serial.println("Location: Burnaby, BC, CA");
       Serial.print("Latitude = ");
-    Serial.println(BURNABY_LATITUDE);
+    Serial.println(49.2488);
       Serial.print("Longitude = ");
-    Serial.println(BURNABY_LONGITUDE);
+    Serial.println(-122.9805);
       Serial.print("UTC offset: ");
-    Serial.println(BURNABY_UTC_OFFSET);
+    Serial.println(-8);
     Serial.println();
 
-    
-    
+
+
     // LCD Debug Enabled Message
     // This will show the configured serial baud rate
     //         0123456789012345
     lcd.print("Debug Enabled");
     lcd.setCursor(0,1);
     lcd.print("Baud: ");
-    lcd.print(SERIAL_BAUD);
+    lcd.print(115200);
 
     // This function literally delays the program for X milliseconds
     delay(3000);
 
     lcd.clear();
 
-  #endif
+
 
   // Clear the LCD one more time for good measure.
-  
+
 }
-
-
-
-
-
-
-
-
-
+# 472 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  7. loop() -- MAIN FUNCTION               //
 ///////////////////////////////////////////////
@@ -482,9 +425,8 @@ void loop() {
   //------ Read Inputs ------//
   //-------------------------//
 
-  // Grab the stored Offsets from EEPROM
-  burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
-  burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
+  burnabySunriseOffset = EEPROM.read(0);
+  burnabySunsetOffset = EEPROM.read(1);
 
   // Grab the current state of the pushbuttons.
   pbUp.read();
@@ -502,21 +444,21 @@ void loop() {
    * This avoids the current time changing
    *  in the middle of the loop. 
    */
-  
+
   now = rtc.now();
 
-  
+
 
   // Convert the current time into minutes after midnight
-  currentMinutes = (now.hour()*60) + now.minute();  
+  currentMinutes = (now.hour()*60) + now.minute();
 
   /* Grab the sunrise and sunset for Burnaby using the current date. 
    * Available methods are sunrise() and sunset(). Arguments are year, month,
    *  day, and if Daylight Saving Time is in effect.
    */
   burnabyDST = isDST_Canada(now.month(), now.day(), now.dayOfTheWeek());
-  burnabySunrise  = burnaby.sunrise(now.year(), now.month(), now.day(), burnabyDST);
-  burnabySunset   = burnaby.sunset(now.year(), now.month(), now.day(), burnabyDST);
+  burnabySunrise = burnaby.sunrise(now.year(), now.month(), now.day(), burnabyDST);
+  burnabySunset = burnaby.sunset(now.year(), now.month(), now.day(), burnabyDST);
 
   if (burnabyDST != burnabyDST_last){
     // If the current DST is different than the last loop (it has changed), adjust the time
@@ -529,13 +471,13 @@ void loop() {
     // and equate the comparison variable so we're not writing the RTC chip every loop
     burnabyDST_last = burnabyDST;
   }
-  
+
 
   // convert the sunrise to 24-hour time for display
   Dusk2Dawn::min2str(timeBurnabySunrise, burnabySunrise);
   // convert the sunset to 24-hour time for display
   Dusk2Dawn::min2str(timeBurnabySunset, burnabySunset);
-  
+
 
   //-------------------------//
   //------ Misc. Stuff ------//
@@ -564,15 +506,15 @@ void loop() {
     if (pbLeft.wasPressed())bools.screen = 0;
     cursorPos.row = 0;
     cursorPos.col = 0;
-    if (cursorPos.row < LCD_ROWS && pbDown.wasPressed())cursorPos.row++;
+    if (cursorPos.row < 4 && pbDown.wasPressed())cursorPos.row++;
     if (cursorPos.row > 0 && pbDown.wasPressed())cursorPos.row--;
-    if (cursorPos.col < LCD_COLUMNS && pbRight.wasPressed()){
+    if (cursorPos.col < 20 && pbRight.wasPressed()){
       if (cursorPos.col < 12 )cursorPos.col = 12;
       if (cursorPos.row == 0 && cursorPos.col > 13 ){
-        EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
+        EEPROM.update(1, burnabySunsetOffset);
       }
       if (cursorPos.row == 1 && cursorPos.col > 13 ){
-        EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
+        EEPROM.update(0, burnabySunriseOffset);
       }
       cursorPos.col++;
     }
@@ -591,19 +533,19 @@ void loop() {
   //-------------------------//
 
   // TODO: Output to the LEDs
-  outputLED_digital(PIN_LED_L, FLASH_BLIP);
-  outputLED_RGB(RED, FLASH_SLOW);
-  outputLED_RGB(GREEN, FLASH_FAST);
+  outputLED_digital(13, 2);
+  outputLED_RGB(255, 000, 000, 3);
+  outputLED_RGB(000, 255, 000, 4);
 
-  
+
   // Control the relay/lights.
   outputRelay();
   LCD_Backlight_PWM.update();
   LED_R_Ramp.update();
   // Display screen on LCD (timed action)
   if (!bools.timedOut) outputLCD_action.check();
-  
-  #ifdef DEBUG
+
+
     // If DEBUG is enabled, send some info to the Serial Port (timed action)
     scanTimeCount++;
     if (scanTimeCount >= scanTimePreset){
@@ -614,9 +556,9 @@ void loop() {
     }
 
     if (test_flash){
-      outputLED_digital(9, FLASH_FAST);
+      outputLED_digital(9, 4);
     }
-    
+
     char SerialKey;
     SerialKey = Serial.read();
 
@@ -638,8 +580,8 @@ void loop() {
         test_flash = false;
     }
 
-    outputSerialDebug_action.check(); 
-  #endif
+    outputSerialDebug_action.check();
+
 
 
 }// END OF MAIN LOOP
@@ -653,6 +595,27 @@ void loop() {
 ////////////////////////////////////////////////
 
 
+bool isDST(int month, int day, int dow){
+
+  /* This function will return 1 or 0 depending on whether
+   * Daylight Savings Time is in effect for the provided date
+   */
+
+  // 'dow' must be 0=Sunday - 6=Saturday
+  int prevSunday = day - dow;
+  // if it is April-October inclusive, it's DST
+  if (month > 3 && month < 11){return true;}
+  // if it's March and it is later than the 2nd Sunday, it's DST
+  else if (month == 3){return prevSunday >= 8;}
+  // if it's November and it's earlier than the first Sunday, it's DST
+  else if (month == 11){return prevSunday <= 0;}
+  // otherwise it's not DST
+  else return 0;
+}
+
+
+
+
 void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation){
   /*
     Use this function to flash an RGB LED.
@@ -662,54 +625,54 @@ void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t an
 
   switch (animation){
 
-    case SOLID:
+    case 1:
       //digitalWrite(LED_pin, HIGH);
-      analogWrite(PIN_LED_R, val_red);
-      analogWrite(PIN_LED_G, val_grn);
-      analogWrite(PIN_LED_B, val_blu);
+      analogWrite(3, val_red);
+      analogWrite(10, val_grn);
+      analogWrite(11, val_blu);
       break;
 
-    case FLASH_BLIP:
-      flashTimer = millis() % (FLASH_BLIP_ON + FLASH_BLIP_OFF);
-      if (flashTimer <= FLASH_BLIP_ON){
-        analogWrite(PIN_LED_R, val_red);
-        analogWrite(PIN_LED_G, val_grn);
-        analogWrite(PIN_LED_B, val_blu);
+    case 2:
+      flashTimer = millis() % (100 + 1750);
+      if (flashTimer <= 100){
+        analogWrite(3, val_red);
+        analogWrite(10, val_grn);
+        analogWrite(11, val_blu);
       }
       else {
-        analogWrite(PIN_LED_R, 0);
-        analogWrite(PIN_LED_G, 0);
-        analogWrite(PIN_LED_B, 0);
+        analogWrite(3, 0);
+        analogWrite(10, 0);
+        analogWrite(11, 0);
       }
       //digitalWrite(LED_pin, (flashTimer <= FLASH_BLIP_ON));
       break;
 
-    case FLASH_SLOW:
-      flashTimer = millis() % (FLASH_SLOW_ON + FLASH_SLOW_OFF);
-      if (flashTimer <= FLASH_SLOW_ON){
-        analogWrite(PIN_LED_R, val_red);
-        analogWrite(PIN_LED_G, val_grn);
-        analogWrite(PIN_LED_B, val_blu);
+    case 3:
+      flashTimer = millis() % (900 + 900);
+      if (flashTimer <= 900){
+        analogWrite(3, val_red);
+        analogWrite(10, val_grn);
+        analogWrite(11, val_blu);
       }
       else {
-        analogWrite(PIN_LED_R, 0);
-        analogWrite(PIN_LED_G, 0);
-        analogWrite(PIN_LED_B, 0);
+        analogWrite(3, 0);
+        analogWrite(10, 0);
+        analogWrite(11, 0);
       }
       //digitalWrite(LED_pin, (flashTimer <= FLASH_SLOW_ON));
       break;
 
-    case FLASH_FAST:
-      flashTimer = millis() % (FLASH_FAST_ON + FLASH_FAST_OFF);
-      if (flashTimer <= FLASH_FAST_ON){
-        analogWrite(PIN_LED_R, val_red);
-        analogWrite(PIN_LED_G, val_grn);
-        analogWrite(PIN_LED_B, val_blu);
+    case 4:
+      flashTimer = millis() % (300 + 300);
+      if (flashTimer <= 300){
+        analogWrite(3, val_red);
+        analogWrite(10, val_grn);
+        analogWrite(11, val_blu);
       }
       else {
-        analogWrite(PIN_LED_R, 0);
-        analogWrite(PIN_LED_G, 0);
-        analogWrite(PIN_LED_B, 0);
+        analogWrite(3, 0);
+        analogWrite(10, 0);
+        analogWrite(11, 0);
       }
       //digitalWrite(LED_pin, (flashTimer <= FLASH_FAST_ON));
       break;
@@ -733,23 +696,23 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation){
 
   switch (animation){
 
-    case SOLID:
-      digitalWrite(LED_pin, HIGH);
+    case 1:
+      digitalWrite(LED_pin, 0x1);
       break;
 
-    case FLASH_BLIP:
-      flashTimer = millis() % (FLASH_BLIP_ON + FLASH_BLIP_OFF);
-      digitalWrite(LED_pin, (flashTimer <= FLASH_BLIP_ON));
+    case 2:
+      flashTimer = millis() % (100 + 1750);
+      digitalWrite(LED_pin, (flashTimer <= 100));
       break;
 
-    case FLASH_SLOW:
-      flashTimer = millis() % (FLASH_SLOW_ON + FLASH_SLOW_OFF);
-      digitalWrite(LED_pin, (flashTimer <= FLASH_SLOW_ON));
+    case 3:
+      flashTimer = millis() % (900 + 900);
+      digitalWrite(LED_pin, (flashTimer <= 900));
       break;
 
-    case FLASH_FAST:
-      flashTimer = millis() % (FLASH_FAST_ON + FLASH_FAST_OFF);
-      digitalWrite(LED_pin, (flashTimer <= FLASH_FAST_ON));
+    case 4:
+      flashTimer = millis() % (300 + 300);
+      digitalWrite(LED_pin, (flashTimer <= 300));
       break;
 
     default:
@@ -782,7 +745,7 @@ void outputLCD(void){
    * lcd.setCursor(Column,Row); to move the cursor.
    * lcd.home(); to put the cursor at 0,0 (top-left).
    * lcd.print(variable/string); to print something. Data types cannot be combined.
-   */ 
+   */
 
   switch (bools.screen) {
     case 0:
@@ -815,11 +778,11 @@ void outputLCD(void){
       lcd.write(254);
       lcd.write(254);
 
-      
+
       lcd.print("S.");
       lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
 
-      
+
 
       break;
 
@@ -831,7 +794,7 @@ void outputLCD(void){
         lcd.setCursor(cursorPos.col, cursorPos.row);
         lcd.blink();
       }
-      
+
       break;
 
 
@@ -856,21 +819,21 @@ void outputRelay(void){
   // If the current time is after sunset...
   if (currentMinutes > (burnabySunset + burnabySunsetOffset)){
     // Turn the lights ON.
-    digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(GREEN, SOLID);
+    digitalWrite(8, 0x1);
+    outputLED_RGB(000, 255, 000, 1);
   }
 
   // Or if the current time is before sunrise...
   else if (currentMinutes < (burnabySunrise + burnabySunriseOffset)){
     // Turn the lights ON.
-    digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(GREEN, SOLID);
+    digitalWrite(8, 0x1);
+    outputLED_RGB(000, 255, 000, 1);
   }
 
   // Otherwise, it's daytime.
   else {
     // Turn the lights OFF.
-    digitalWrite(PIN_RELAY, LOW);
+    digitalWrite(8, 0x0);
   }
 
 }
@@ -879,8 +842,8 @@ void outputRelay(void){
 
 
 void outputSerialDebug(void){
-  
-    
+
+
     /* Main Debug Serial Message:
      * 
      * This block of Serial.print() statements will output some useful information
@@ -902,7 +865,7 @@ void outputSerialDebug(void){
 
       // reset the last time the code was run to the current time
       prevTime_Serial = currTime_Serial;
-      
+
       Serial.println("============================");
       //DEBUG: print the current date/time
       Serial.println("Current date/time:");
@@ -937,7 +900,6 @@ void outputSerialDebug(void){
       Serial.println(scanTimeAverage);
       Serial.println();
     }
-    
-  
-}
 
+
+}
