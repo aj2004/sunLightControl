@@ -1,0 +1,47 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/kevin/Sync/Programming/ard/libraries/**",
+                "/home/kevin/arduino/tools/**",
+                "/home/kevin/arduino/hardware/arduino/avr/**",
+                "/home/kevin/arduino/hardware/**"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/lib/**",
+                    "/home/kevin/arduino/tools/**",
+                    "/home/kevin/arduino/hardware/arduino/avr/**"
+                ]
+            },
+            "defines": [
+                "USBCON"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "${default}",
+            "forcedInclude": [
+                "/home/kevin/arduino/hardware/arduino/avr/cores/arduino/Arduino.h"
+            ]
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**",
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\**",
+                "Z:\\Program Files (x86)\\Arduino\\hardware\\**",
+                "Z:\\Sync\\Programming\\ard\\libraries\\**"
+            ],
+            "browse": {
+                "path": [
+                    "Z:\\Program Files (x86)\\Arduino\\hardware\\**",
+                    "Z:\\Sync\\Programming\\ard\\libraries\\**"
+                ]
+            }
+        }
+    ],
+    "version": 4
+}

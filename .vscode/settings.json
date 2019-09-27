@@ -1,0 +1,8 @@
+{
+    "C_Cpp.intelliSenseEngineFallback": "Enabled",
+    "C_Cpp.dimInactiveRegions": false,
+    
+    "files.associations": {
+        "xstring": "cpp"
+    }
+}
