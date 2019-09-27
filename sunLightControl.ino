@@ -82,7 +82,6 @@
 #define PIN_RELAY 8
 
 // Setup the LED pins here.
-
 // The RGB LED should be wired to pins 3,5,6,9,10,11
 // These are the hardware PWM pins.
 #define PIN_LED_R 9
@@ -606,7 +605,6 @@ void loop() {
 
 
 }// END OF MAIN LOOP
-
 
 
 bool isDST(int month, int day, int dow){
