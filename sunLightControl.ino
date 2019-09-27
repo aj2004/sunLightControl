@@ -1,5 +1,6 @@
 /* 2018-08-09
  * 
+ * 
  * Outdoor light timer based on sunrise and sunset.
  * This program is meant to control the puck lights (in the soffet) out front
  * so that the timer doesn't have to be reset twice a year and so the lights
