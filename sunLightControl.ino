@@ -1,17 +1,10 @@
 /* 2018-08-09
- * Pacificon Systems
+ * 
  * Outdoor light timer based on sunrise and sunset.
- * This program is meant to control the spot lights (in the soffet) out front
+ * This program is meant to control the puck lights (in the soffet) out front
  * so that the timer doesn't have to be reset twice a year and so the lights
  * turn on/off at the same time each day, relative to the daylight.
- * 
- * 2018-08-09: Tested the Dusk2Dawn library and it works.
- * 
- * TODO:
- *  - Add an RTC for accurate time-keeping
- *  - Add a character LCD (like a 1602) to view the status or change the on/off time.
- *  - Add some buttons to scroll through the LCD.
- *  - Will I need a menu system? See alarmClock for an example implementation.
+ *  
  * 
  * *********************
  * * TABLE OF CONTENTS *
@@ -28,6 +21,11 @@
  * 
  */
 
+
+
+
+
+
 /////////////////////////////////////////////
 //   INCLUDED LIBRARIES                    //
 /////////////////////////////////////////////
@@ -39,6 +37,11 @@
 #include <TimedAction.h>
 #include <EEPROM.h>
 #include "PWM_RampLinear.h"
+
+
+
+
+
 
 
 
@@ -78,6 +81,7 @@
 #define PIN_RELAY 8
 
 // Setup the LED pins here.
+
 // The RGB LED should be wired to pins 3,5,6,9,10,11
 // These are the hardware PWM pins.
 #define PIN_LED_R 9
@@ -120,6 +124,10 @@
 // These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
 #define ADDR_SUNRISE_OFFSET 0
 #define ADDR_SUNSET_OFFSET 1
+
+
+
+
 
 
 
@@ -203,6 +211,12 @@ two_nibbles cursorPos;
 
 #endif
 
+
+
+
+
+
+
 /////////////////////////////////////////////
 //   OBJECT CREATION                       //
 /////////////////////////////////////////////
@@ -276,6 +290,9 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 
 
 
+
+
+
 /////////////////////////////////////////////
 //   FUNCTION DECLARATIONS                 //
 /////////////////////////////////////////////
@@ -325,6 +342,9 @@ void outputRelay(void);
   void outputSerialDebug(void);
   TimedAction outputSerialDebug_action = TimedAction(2000, outputSerialDebug);
 #endif
+
+
+
 
 
 
@@ -430,6 +450,14 @@ void setup() {
   // Clear the LCD one more time for good measure.
   
 }
+
+
+
+
+
+
+
+
 
 /////////////////////////////////////////////
 //   loop() -- MAIN FUNCTION               //
@@ -579,6 +607,7 @@ void loop() {
 }// END OF MAIN LOOP
 
 
+
 bool isDST(int month, int day, int dow){
 
   /* This function will return 1 or 0 depending on whether
@@ -596,6 +625,9 @@ bool isDST(int month, int day, int dow){
   // otherwise it's not DST
   else return 0;
 }
+
+
+
 
 void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation){
   /*
@@ -664,6 +696,9 @@ void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t an
   }
 }
 
+
+
+
 void outputLED_digital(uint8_t LED_pin, uint8_t animation){
   /*
    * Use this function to flash a single LED.
@@ -698,6 +733,8 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation){
 
   }
 }
+
+
 
 
 void outputLCD(void){
@@ -778,6 +815,9 @@ void outputLCD(void){
 
 }
 
+
+
+
 void outputRelay(void){
 
   /* Relay Output Logic:
@@ -810,6 +850,9 @@ void outputRelay(void){
   }
 
 }
+
+
+
 
 void outputSerialDebug(void){
   
