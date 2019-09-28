@@ -86,27 +86,18 @@
 // Setup the LED pins here.
 // The RGB LED should be wired to pins 3,5,6,9,10,11
 // These are the hardware PWM pins.
-#define PIN_LED_R 3
+#define PIN_LED_R 9
 #define PIN_LED_G 10
 #define PIN_LED_B 11
-// This LED is on the Arduino circuit board, hard-wired to pin 13.
-#define PIN_LED_L 13
-// Set the LCD backlight pin here.
+// Set the LCD backlight PWM pin here.
 #define PIN_LCD_A  6
 
+// This digital LED is on the Arduino circuit board, hard-wired to pin 13.
+#define PIN_LED_L 13
 
+// How many seconds of idle time before the screen goes to sleep?
+#define SCREEN_TIMEOUT_SEC 10
 
-
-// Don't change these values
-#define RED   255, 000, 000
-#define GREEN 000, 255, 000
-#define BLUE  000, 000, 255
-
-// Don't change these values
-#define SOLID 1
-#define FLASH_BLIP 2
-#define FLASH_SLOW 3
-#define FLASH_FAST 4
 
 // Lamp Flash times, in milliseconds
 #define FLASH_BLIP_ON 100
@@ -123,7 +114,29 @@
 #define BURNABY_LONGITUDE -122.9805
 #define BURNABY_UTC_OFFSET -8
 
+
+
+
+
+
+/*
+ * Values below this comment should not have to be changed.
+ */
+
+// Don't change these values
+#define RED   255, 000, 000
+#define GREEN 000, 255, 000
+#define BLUE  000, 000, 255
+
+// Don't change these values
+#define SOLID 1
+#define FLASH_BLIP 2
+#define FLASH_SLOW 3
+#define FLASH_FAST 4
+
 // These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
+// NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
+//       So, avoid excessive writing.
 #define ADDR_SUNRISE_OFFSET 0
 #define ADDR_SUNSET_OFFSET 1
 
@@ -140,11 +153,8 @@
 /*
  * This struct will allow 8 bools to be packed into a single byte,
  * rather than taking up 8 bytes.
- * The number after the colon is the size, in bits
+ * The number after the colon is the size, in BITS
  */
-
-
-
 struct boolByte
 {
     bool screen:1;
@@ -161,8 +171,6 @@ struct boolByte
 boolByte bools;
 
 
-// idle timeout, in seconds
-const uint16_t screenTimeout = 10;
 // to store the previous elapsed time
 uint32_t screenTimeoutTimer = 0;
 
@@ -205,7 +213,7 @@ two_nibbles cursorPos;
   long currTime_Serial = 0;
   uint16_t interval_Serial = 2000;
   // Preset is how many scans to average the reported scan time over
-  uint16_t scanTimePreset = 10;
+  uint16_t scanTimePreset = 100;
   uint16_t scanTimeCount = 0;
   uint32_t scanTimeCurr = 0;
   uint32_t scanTimePrev = 0;
@@ -239,12 +247,6 @@ LiquidCrystal_I2C lcd(0x27, LCD_COLUMNS, LCD_ROWS);
  * Argument: Pin Number
  */
 PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
-
-PWM_RampLinear LED_R_Ramp(9);
-
-//TODO
-bool test_flash = false;
-
 
 /* Create the Button objects.
  *  
@@ -416,11 +418,6 @@ void setup() {
   pinMode(PIN_LED_L, OUTPUT);
   digitalWrite(PIN_LED_L, LOW);
 
-  #ifdef DEBUG
-    //TODO
-    pinMode(9, OUTPUT);
-  #endif
-
 
   // Initialize the LCD & clear any junk left in screen memory
   lcd.init();
@@ -580,7 +577,7 @@ void loop() {
 
   }
 
-  if (millis() - screenTimeoutTimer > (screenTimeout * 1000)){
+  if (millis() - screenTimeoutTimer > (SCREEN_TIMEOUT_SEC * 1000)){
     // If the system times out, set the flag and dim the LCD
     bools.timedOut = true;
     LCD_Backlight_PWM.ramp(0, 1500);

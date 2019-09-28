@@ -123,7 +123,7 @@
 
 
 
-typedef struct
+struct boolByte
 {
     bool screen:1;
     bool lcdFading:1;
@@ -133,7 +133,7 @@ typedef struct
     bool var5:1;
     bool var6:1;
     bool var7:1;
-}__attribute__((packed)) boolByte;
+}__attribute__((packed));
 // make a new variable of type "boolByte"
 // address each member like so: bools.screen = 0;
 boolByte bools;
@@ -183,7 +183,7 @@ two_nibbles cursorPos;
   long currTime_Serial = 0;
   uint16_t interval_Serial = 2000;
   // Preset is how many scans to average the reported scan time over
-  uint16_t scanTimePreset = 10;
+  uint16_t scanTimePreset = 100;
   uint16_t scanTimeCount = 0;
   uint32_t scanTimeCurr = 0;
   uint32_t scanTimePrev = 0;
@@ -211,6 +211,8 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 PWM_RampLinear LCD_Backlight_PWM(6);
 
 PWM_RampLinear LED_R_Ramp(9);
+
+//TODO
 bool test_flash = false;
 
 
@@ -259,14 +261,12 @@ Button pbEnter(12, true, true, 30);
  * 
  */
 Dusk2Dawn burnaby(49.2488, -122.9805, -8);
-# 301 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+# 303 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  5. FUNCTION DECLARATIONS                 //
 ///////////////////////////////////////////////
 
 
-// Call this function to return a 1 if Daylight-Savings Time is active, 0 if not.
-bool isDST(int month, int day, int dow);
 bool burnabyDST;
 bool burnabyDST_last;
 
@@ -369,6 +369,7 @@ void setup() {
   digitalWrite(13, 0x0);
 
 
+    //TODO
     pinMode(9, 0x1);
 
 
@@ -412,7 +413,7 @@ void setup() {
   // Clear the LCD one more time for good measure.
 
 }
-# 472 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
+# 473 "/mirrback/kevin/Sync/Programming/ard/sunLightControl/sunLightControl.ino"
 ///////////////////////////////////////////////
 //  7. loop() -- MAIN FUNCTION               //
 ///////////////////////////////////////////////
@@ -425,6 +426,7 @@ void loop() {
   //------ Read Inputs ------//
   //-------------------------//
 
+  // Grab the stored Offsets from EEPROM
   burnabySunriseOffset = EEPROM.read(0);
   burnabySunsetOffset = EEPROM.read(1);
 
@@ -593,27 +595,6 @@ void loop() {
 ////////////////////////////////////////////////
 //  8. FUNCTION PROTOTYPES                    //
 ////////////////////////////////////////////////
-
-
-bool isDST(int month, int day, int dow){
-
-  /* This function will return 1 or 0 depending on whether
-   * Daylight Savings Time is in effect for the provided date
-   */
-
-  // 'dow' must be 0=Sunday - 6=Saturday
-  int prevSunday = day - dow;
-  // if it is April-October inclusive, it's DST
-  if (month > 3 && month < 11){return true;}
-  // if it's March and it is later than the 2nd Sunday, it's DST
-  else if (month == 3){return prevSunday >= 8;}
-  // if it's November and it's earlier than the first Sunday, it's DST
-  else if (month == 11){return prevSunday <= 0;}
-  // otherwise it's not DST
-  else return 0;
-}
-
-
 
 
 void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation){
