@@ -559,26 +559,29 @@ void loop() {
   if (bools.screen == 0 && pbRight.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
     lcd.clear();
+    cursorPos.row = 0;
+    cursorPos.col = 0;
     bools.screen = 1;
+  }
+  if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
+    // if at the left-most screen and "right" was pressed, go right
+    lcd.clear();
+    cursorPos.row = 0;
+    cursorPos.col = 0;
+    bools.screen = 0;
   }
 
   if (bools.screen == 1){
-    // if at the right-most screen and "left" was pressed, go left
-    if (pbLeft.wasPressed()){
-      lcd.clear();
-      bools.screen = 0;
-    }
-    cursorPos.row = 0;
-    cursorPos.col = 0;
-    if (cursorPos.row < LCD_ROWS && pbDown.wasPressed())cursorPos.row++;
-    if (cursorPos.row > 0 && pbDown.wasPressed())cursorPos.row--;
-    if (cursorPos.col < LCD_COLUMNS && pbRight.wasPressed()){
+      
+    if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
+    if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
+    if (cursorPos.col < LCD_COLUMNS-1 && pbRight.wasPressed()){
       if (cursorPos.col < 12 )cursorPos.col = 12;
       if (cursorPos.row == 0 && cursorPos.col > 13 ){
-        EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
+        //EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
       }
       if (cursorPos.row == 1 && cursorPos.col > 13 ){
-        EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
+        //EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
       }
       cursorPos.col++;
     }
@@ -844,8 +847,30 @@ void outputLCD(void){
       //TODO: 'Setup' screen
       lcd.setCursor(0, cursorPos.row);
       lcd.print(">");
-      if (cursorPos.col > 0){
-        lcd.setCursor(cursorPos.col, cursorPos.row);
+
+      // Print the Sunrise Offset
+      lcd.setCursor(2, 0);
+      /*lcd.print("Sunrise");
+            if(burnabySunriseOffset < 0){lcd.print(" ");}
+      else  if(burnabySunriseOffset >= 0){lcd.print(" +");}
+      lcd.print(burnabySunriseOffset);
+      lcd.print("m");*/
+      lcd.print("Row= ");
+      lcd.print(cursorPos.row);
+
+      // Print the Sunset Offset
+      lcd.setCursor(2, 1);
+      /*lcd.print(" Sunset");
+            if(burnabySunsetOffset < 0){lcd.print(" ");}
+      else  if(burnabySunsetOffset >= 0){lcd.print(" +");}
+      lcd.print(burnabySunsetOffset);
+      lcd.print("m");*/
+      lcd.print("Col= ");
+      lcd.print(cursorPos.col);
+
+      lcd.setCursor(cursorPos.col, cursorPos.row);
+
+      if (cursorPos.col > 1){
         lcd.blink();
       }
       
