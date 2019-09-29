@@ -139,8 +139,8 @@
 // These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
 // NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
 //       So, avoid excessive writing.
-#define ADDR_SUNRISE_OFFSET 0
-#define ADDR_SUNSET_OFFSET 1
+#define ADDR_SUNRISE_OFFSET 20
+#define ADDR_SUNSET_OFFSET 30
 
 
 
@@ -172,6 +172,8 @@ struct boolByte
 // address each member like so: bools.screen = 0;
 boolByte bools;
 
+uint16_t pbRepeatTimer = 0;
+
 // to store the previous elapsed time
 uint32_t screenTimeoutTimer = 0;
 // to grab a snapshot of the current time, in minutes after midnight
@@ -188,6 +190,9 @@ char timeBurnabySunset[] = "00:00";
 // Range is -127...+127 (approx. +/- 2 hours)
 int8_t burnabySunriseOffset = 0;
 int8_t burnabySunsetOffset = 0;
+
+int8_t burnabySunriseOffset_new = 0;
+int8_t burnabySunsetOffset_new = 0;
 
 // These can be used when displaying the date, or for debugging
 // use something like: lcd.print(dayName[now.dayOfTheWeek]) or dayNameShort[now.dayOfTheWeek]
@@ -206,6 +211,7 @@ struct two_nibbles
 }__attribute__((packed));
 
 two_nibbles cursorPos;
+two_nibbles cursorPos_prev;
 
 #ifdef DEBUG
   // This timer is for serial debugging updates.
@@ -334,8 +340,8 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation);
  *  0 = main screen
  *  1 = setup screen
  */
-void outputLCD(void);
-TimedAction outputLCD_action = TimedAction(250,outputLCD);
+void outputLCD(int LCDscreen);
+//TimedAction outputLCD_action = TimedAction(100,outputLCD);
 
 
 
@@ -426,7 +432,9 @@ void setup() {
   analogWrite(PIN_LCD_A, 255);
   LCD_Backlight_PWM.ramp(255, 500);
   //set the cursor to 0,0 (top-left)
-  lcd.home();  
+  lcd.home();
+
+    
 
   #ifdef DEBUG
     //DEBUG: print the location information
@@ -450,9 +458,10 @@ void setup() {
     lcd.print(SERIAL_BAUD);
 
     // This function literally delays the program for X milliseconds
-    delay(3000);
+    delay(1500);
 
     lcd.clear();
+    outputLCD(0);
 
   #endif
 
@@ -541,6 +550,10 @@ void loop() {
   //------ Misc. Stuff ------//
   //-------------------------//
 
+  if (pbUp.wasReleased() || pbDown.wasReleased() || pbLeft.wasReleased() || pbRight.wasReleased() || pbEnter.wasReleased()){
+    pbRepeatTimer = 0;
+  }
+
   if (pbUp.wasPressed() || pbDown.wasPressed() || pbLeft.wasPressed() || pbRight.wasPressed() || pbEnter.wasPressed()){
     // If ANY button is pressed, reset the screenTimeoutTimer
     screenTimeoutTimer = millis();
@@ -551,6 +564,7 @@ void loop() {
       lcd.backlight();
       LCD_Backlight_PWM.ramp(255, 500);
       bools.screen = 0;
+      outputLCD(0);
     }
     // screen's not timed out anymore...
     bools.timedOut = false;
@@ -562,6 +576,11 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 1;
+    burnabySunriseOffset_new = EEPROM.read(ADDR_SUNRISE_OFFSET);
+    burnabySunsetOffset_new = EEPROM.read(ADDR_SUNSET_OFFSET);
+    //burnabySunriseOffset_new = burnabySunriseOffset;
+    //burnabySunsetOffset_new = burnabySunsetOffset;
+    outputLCD(1);
   }
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
@@ -569,25 +588,73 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 0;
+    outputLCD(0);
   }
 
   if (bools.screen == 1){
+    //outputLCD(1);
+    lcd.setCursor(cursorPos.col, cursorPos.row);
+
+    if (cursorPos.col == 0){
+
+      if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
+      if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
       
-    if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
-    if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
-    if (cursorPos.col < LCD_COLUMNS-1 && pbRight.wasPressed()){
-      if (cursorPos.col < 12 )cursorPos.col = 12;
-      if (cursorPos.row == 0 && cursorPos.col > 13 ){
-        //EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
-      }
-      if (cursorPos.row == 1 && cursorPos.col > 13 ){
-        //EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
-      }
-      cursorPos.col++;
+      if (pbLeft.wasPressed())bools.screen = 0;
+      if (pbRight.wasPressed())cursorPos.col = 12;
+      
     }
-    if (cursorPos.col > 0 && pbLeft.wasPressed())cursorPos.col--;
+
+    else if (cursorPos.col == 12){
+
+      if (pbLeft.wasPressed())cursorPos.col = 0;
+      if (pbRight.wasPressed()){
+        if (cursorPos.row == 0) EEPROM.write(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
+        if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
+        cursorPos.col = 0;
+      }
+
+      if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
+        if (burnabySunriseOffset_new <= 120){
+          if (cursorPos.row == 0) burnabySunriseOffset_new++;
+          outputLCD(1);
+        }
+        if (burnabySunsetOffset_new <= 120){
+          if (cursorPos.row == 1) burnabySunsetOffset_new++;
+          outputLCD(1);
+        }
+        pbRepeatTimer += REPEAT_MS;
+      }
+
+      if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
+        if (burnabySunriseOffset_new >= -120){
+          if (cursorPos.row == 0) burnabySunriseOffset_new--;
+          outputLCD(1);
+        }
+        if (burnabySunsetOffset_new >= 120){
+          if (cursorPos.row == 1) burnabySunsetOffset_new--;
+          outputLCD(1);
+        }
+        pbRepeatTimer += REPEAT_MS;
+      }
+
+    }
+
+    
+
+
+
+    // If the cursor has been moved, update the screen
+    if ((cursorPos.row != cursorPos_prev.row) || (cursorPos.col != cursorPos_prev.col)){
+      
+      cursorPos_prev.row = cursorPos.row;
+      cursorPos_prev.col = cursorPos.col;
+      outputLCD(1);
+
+    }
 
   }
+
 
   if (millis() - screenTimeoutTimer > (SCREEN_TIMEOUT_SEC * 1000)){
     // If the system times out, set the flag and dim the LCD
@@ -620,8 +687,10 @@ void loop() {
   //TODO: outputRelay();
   LCD_Backlight_PWM.update();
    // Display screen on LCD (timed action)
-  if (!bools.timedOut) outputLCD_action.check();
-  
+  //if (!bools.timedOut) outputLCD_action.check();
+  if (!bools.timedOut && bools.screen == 0) outputLCD(0);
+
+
   #ifdef DEBUG
     // If DEBUG is enabled, send some info to the Serial Port (timed action)
     scanTimeCount++;
@@ -780,8 +849,7 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation){
 
 
 
-
-void outputLCD(void){
+void outputLCD(int LCDscreen){
 
   /* LCD DISPLAY:
    * The LCD is a '1602': 16 characters/columns, 2 rows
@@ -804,11 +872,12 @@ void outputLCD(void){
    * lcd.print(variable/string); to print something. Data types cannot be combined.
    */ 
 
-  switch (bools.screen) {
+  switch (LCDscreen) {
     case 0:
       // 0 = MAIN SCREEN
       // LINE 0
       // Print the date
+      lcd.noBlink();
       lcd.setCursor(0,0);
 
       lcd.print(monthNameShort[now.month()]);
@@ -844,35 +913,35 @@ void outputLCD(void){
       break;
 
     case 1:
-      //TODO: 'Setup' screen
-      lcd.setCursor(0, cursorPos.row);
-      lcd.print(">");
-
+      
+      lcd.noBlink();
       // Print the Sunrise Offset
-      lcd.setCursor(2, 0);
-      /*lcd.print("Sunrise");
-            if(burnabySunriseOffset < 0){lcd.print(" ");}
-      else  if(burnabySunriseOffset >= 0){lcd.print(" +");}
-      lcd.print(burnabySunriseOffset);
-      lcd.print("m");*/
-      lcd.print("Row= ");
-      lcd.print(cursorPos.row);
+      lcd.setCursor(0, 0);
+      lcd.print("  Sunrise");
+            if(burnabySunriseOffset_new < 0){lcd.print(" ");}
+      else  if(burnabySunriseOffset_new >= 0){lcd.print(" +");}
+      lcd.print(burnabySunriseOffset_new);
+      lcd.print("m");
 
       // Print the Sunset Offset
-      lcd.setCursor(2, 1);
-      /*lcd.print(" Sunset");
-            if(burnabySunsetOffset < 0){lcd.print(" ");}
-      else  if(burnabySunsetOffset >= 0){lcd.print(" +");}
-      lcd.print(burnabySunsetOffset);
-      lcd.print("m");*/
-      lcd.print("Col= ");
-      lcd.print(cursorPos.col);
+      lcd.setCursor(0, 1);
+      lcd.print("   Sunset");
+            if(burnabySunsetOffset_new < 0){lcd.print(" ");}
+      else  if(burnabySunsetOffset_new >= 0){lcd.print(" +");}
+      lcd.print(burnabySunsetOffset_new);
+      lcd.print("m");
+      
 
-      lcd.setCursor(cursorPos.col, cursorPos.row);
-
-      if (cursorPos.col > 1){
+      lcd.setCursor(0, cursorPos.row);
+      lcd.print(">");
+      if(cursorPos.col > 1){
         lcd.blink();
       }
+      else{
+        lcd.noBlink();
+      }
+
+      
       
       break;
 
