@@ -136,11 +136,7 @@
 #define FLASH_SLOW 3
 #define FLASH_FAST 4
 
-// These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
-// NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
-//       So, avoid excessive writing.
-#define ADDR_SUNRISE_OFFSET 20
-#define ADDR_SUNSET_OFFSET 30
+
 
 
 
@@ -193,6 +189,12 @@ int8_t burnabySunsetOffset = 0;
 
 int8_t burnabySunriseOffset_new = 0;
 int8_t burnabySunsetOffset_new = 0;
+
+// These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
+// NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
+//       So, avoid excessive writing.
+const int ADDR_SUNRISE_OFFSET = 20;
+const int ADDR_SUNSET_OFFSET = 30;
 
 // These can be used when displaying the date, or for debugging
 // use something like: lcd.print(dayName[now.dayOfTheWeek]) or dayNameShort[now.dayOfTheWeek]
@@ -609,19 +611,17 @@ void loop() {
 
       if (pbLeft.wasPressed())cursorPos.col = 0;
       if (pbRight.wasPressed()){
-        if (cursorPos.row == 0) EEPROM.write(ADDR_SUNRISE_OFFSET, burnabySunriseOffset);
-        if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset);
+        if (cursorPos.row == 0) EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset_new);
+        if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset_new);
         cursorPos.col = 0;
       }
 
       if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
         if (burnabySunriseOffset_new <= 120){
           if (cursorPos.row == 0) burnabySunriseOffset_new++;
-          outputLCD(1);
         }
         if (burnabySunsetOffset_new <= 120){
           if (cursorPos.row == 1) burnabySunsetOffset_new++;
-          outputLCD(1);
         }
         pbRepeatTimer += REPEAT_MS;
       }
@@ -629,11 +629,9 @@ void loop() {
       if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
         if (burnabySunriseOffset_new >= -120){
           if (cursorPos.row == 0) burnabySunriseOffset_new--;
-          outputLCD(1);
         }
-        if (burnabySunsetOffset_new >= 120){
+        if (burnabySunsetOffset_new >= -120){
           if (cursorPos.row == 1) burnabySunsetOffset_new--;
-          outputLCD(1);
         }
         pbRepeatTimer += REPEAT_MS;
       }
@@ -653,6 +651,10 @@ void loop() {
 
     }
 
+    if ((burnabySunriseOffset_new != burnabySunriseOffset) || (burnabySunsetOffset_new != burnabySunsetOffset)){
+      outputLCD(1);
+    }
+
   }
 
 
@@ -663,6 +665,7 @@ void loop() {
     if(LCD_Backlight_PWM.rampDoneOS){
       lcd.noBacklight();
       lcd.clear();
+      lcd.noBlink();
     }
     
   }
