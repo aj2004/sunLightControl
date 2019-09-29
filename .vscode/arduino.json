@@ -1,7 +1,7 @@
 {
-    "port": "/dev/ttyUSB0",
+    "port": "COM18",
     "board": "arduino:avr:nano",
     "sketch": "sunLightControl.ino",
-    "output": "./build",
-    "configuration": "cpu=atmega328old"
+    "output": "build",
+    "configuration": "cpu=atmega328"
 }

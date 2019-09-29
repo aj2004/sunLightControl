@@ -7,7 +7,9 @@
                 "/home/kevin/Sync/Programming/ard/libraries/**",
                 "/home/kevin/arduino/tools/**",
                 "/home/kevin/arduino/hardware/arduino/avr/**",
-                "/home/kevin/arduino/hardware/**"
+                "/home/kevin/arduino/hardware/**",
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\**",
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**"
             ],
             "browse": {
                 "path": [
@@ -24,7 +26,8 @@
             "cppStandard": "c++14",
             "intelliSenseMode": "${default}",
             "forcedInclude": [
-                "/home/kevin/arduino/hardware/arduino/avr/cores/arduino/Arduino.h"
+                "/home/kevin/arduino/hardware/arduino/avr/cores/arduino/Arduino.h",
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\cores\\arduino\\Arduino.h"
             ]
         },
         {
@@ -40,7 +43,10 @@
                     "Z:\\Program Files (x86)\\Arduino\\hardware\\**",
                     "Z:\\Sync\\Programming\\ard\\libraries\\**"
                 ]
-            }
+            },
+            "forcedInclude": [
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\cores\\arduino\\Arduino.h"
+            ]
         }
     ],
     "version": 4

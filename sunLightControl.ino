@@ -68,8 +68,8 @@
   #define SERIAL_BAUD 115200
 #endif
 
-#define LCD_COLUMNS 20
-#define LCD_ROWS 4
+#define LCD_COLUMNS 16
+#define LCD_ROWS 2
 
 // Setup the pushbutton pins here.
 #define PIN_PB_UP     A0
@@ -79,6 +79,8 @@
 #define PIN_PB_ENTER  12
 // How long (in milliseconds) to hold a PB before it repeats its function?
 #define REPEAT_MS     300
+// Specify the Debounce time, in milliseconds
+#define PB_DBNC_MS    30
 
 // Setup the relay pin here
 #define PIN_RELAY 8
@@ -170,10 +172,8 @@ struct boolByte
 // address each member like so: bools.screen = 0;
 boolByte bools;
 
-
 // to store the previous elapsed time
 uint32_t screenTimeoutTimer = 0;
-
 // to grab a snapshot of the current time, in minutes after midnight
 uint16_t currentMinutes = 0;
 // these will hold the sunrise/sunset, in minutes after midnight
@@ -185,8 +185,9 @@ char timeBurnabySunrise[] = "00:00";
 char timeBurnabySunset[] = "00:00";
 
 // These will hold the +/- offset
-uint8_t burnabySunriseOffset = 0;
-uint8_t burnabySunsetOffset = 0;
+// Range is -127...+127 (approx. +/- 2 hours)
+int8_t burnabySunriseOffset = 0;
+int8_t burnabySunsetOffset = 0;
 
 // These can be used when displaying the date, or for debugging
 // use something like: lcd.print(dayName[now.dayOfTheWeek]) or dayNameShort[now.dayOfTheWeek]
@@ -281,11 +282,11 @@ PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
 
 //    |Name  | Pin Number  |Pull Up|Invrt|Debnc|
 //----|------|-------------|-------|-----|-----|
-Button pbUp   (PIN_PB_UP,     true, true, 30);
-Button pbDown (PIN_PB_DOWN,   true, true, 30);
-Button pbLeft (PIN_PB_LEFT,   true, true, 30);
-Button pbRight(PIN_PB_RIGHT,  true, true, 30);
-Button pbEnter(PIN_PB_ENTER,  true, true, 30);
+Button pbUp   (PIN_PB_UP,     true, true, PB_DBNC_MS);
+Button pbDown (PIN_PB_DOWN,   true, true, PB_DBNC_MS);
+Button pbLeft (PIN_PB_LEFT,   true, true, PB_DBNC_MS);
+Button pbRight(PIN_PB_RIGHT,  true, true, PB_DBNC_MS);
+Button pbEnter(PIN_PB_ENTER,  true, true, PB_DBNC_MS);
 
 /* Create a Dusk2Dawn object. (for sunrise/sunset times)
  * Arguments: latitude, longitude, UTC offset
@@ -293,8 +294,6 @@ Button pbEnter(PIN_PB_ENTER,  true, true, 30);
  * 
  */
 Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
-
-//test
 
 
 
@@ -336,7 +335,7 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation);
  *  1 = setup screen
  */
 void outputLCD(void);
-TimedAction outputLCD_action = TimedAction(1000,outputLCD);
+TimedAction outputLCD_action = TimedAction(250,outputLCD);
 
 
 
@@ -409,11 +408,11 @@ void setup() {
 
   // Setup the LED pins here.
   pinMode(PIN_LED_R, OUTPUT);
-  digitalWrite(PIN_LED_R, LOW);
+  digitalWrite(PIN_LED_R, HIGH);
   pinMode(PIN_LED_G, OUTPUT);
-  digitalWrite(PIN_LED_G, LOW);
+  digitalWrite(PIN_LED_G, HIGH);
   pinMode(PIN_LED_B, OUTPUT);
-  digitalWrite(PIN_LED_B, LOW);
+  digitalWrite(PIN_LED_B, HIGH);
   // And the onboard LED: Labelled 'L'
   pinMode(PIN_LED_L, OUTPUT);
   digitalWrite(PIN_LED_L, LOW);
@@ -422,8 +421,10 @@ void setup() {
   // Initialize the LCD & clear any junk left in screen memory
   lcd.init();
   lcd.clear();
+  lcd.backlight();
   // analogWrite is an 8-bit PWM output
   analogWrite(PIN_LCD_A, 255);
+  LCD_Backlight_PWM.ramp(255, 500);
   //set the cursor to 0,0 (top-left)
   lcd.home();  
 
@@ -490,6 +491,8 @@ void loop() {
   pbRight.read();
   pbEnter.read();
 
+  
+
 
   //-------------------------//
   //--- Time Calculations ---//
@@ -541,11 +544,13 @@ void loop() {
   if (pbUp.wasPressed() || pbDown.wasPressed() || pbLeft.wasPressed() || pbRight.wasPressed() || pbEnter.wasPressed()){
     // If ANY button is pressed, reset the screenTimeoutTimer
     screenTimeoutTimer = millis();
+    
     lcd.display();
     // If the display happened to be timed out, change to screen 0 and brighten the LCD backlight
     if (bools.timedOut) {
-      bools.screen = 0;
+      lcd.backlight();
       LCD_Backlight_PWM.ramp(255, 500);
+      bools.screen = 0;
     }
     // screen's not timed out anymore...
     bools.timedOut = false;
@@ -553,12 +558,16 @@ void loop() {
 
   if (bools.screen == 0 && pbRight.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
+    lcd.clear();
     bools.screen = 1;
   }
 
   if (bools.screen == 1){
     // if at the right-most screen and "left" was pressed, go left
-    if (pbLeft.wasPressed())bools.screen = 0;
+    if (pbLeft.wasPressed()){
+      lcd.clear();
+      bools.screen = 0;
+    }
     cursorPos.row = 0;
     cursorPos.col = 0;
     if (cursorPos.row < LCD_ROWS && pbDown.wasPressed())cursorPos.row++;
@@ -581,6 +590,11 @@ void loop() {
     // If the system times out, set the flag and dim the LCD
     bools.timedOut = true;
     LCD_Backlight_PWM.ramp(0, 1500);
+    if(LCD_Backlight_PWM.rampDoneOS){
+      lcd.noBacklight();
+      lcd.clear();
+    }
+    
   }
 
   //-------------------------//
@@ -588,16 +602,21 @@ void loop() {
   //-------------------------//
 
   // TODO: Output to the LEDs
-  outputLED_digital(PIN_LED_L, FLASH_BLIP);
-  outputLED_RGB(RED, FLASH_SLOW);
-  outputLED_RGB(GREEN, FLASH_FAST);
+
+  #ifdef DEBUG
+    if(pbLeft.isPressed()){
+      outputLED_RGB(255,0,0, FLASH_FAST);
+      
+    }
+  #endif
+  outputLED_digital(PIN_LED_L, FLASH_SLOW);
+  
 
   
   // Control the relay/lights.
-  outputRelay();
+  //TODO: outputRelay();
   LCD_Backlight_PWM.update();
-  LED_R_Ramp.update();
-  // Display screen on LCD (timed action)
+   // Display screen on LCD (timed action)
   if (!bools.timedOut) outputLCD_action.check();
   
   #ifdef DEBUG
@@ -610,9 +629,9 @@ void loop() {
       scanTimePrev = scanTimeCurr;
     }
 
-    if (test_flash){
+    /* if (test_flash){
       outputLED_digital(9, FLASH_FAST);
-    }
+    }*/
     
     char SerialKey;
     SerialKey = Serial.read();
@@ -620,19 +639,20 @@ void loop() {
     switch (SerialKey){
 
       case 'w':
-        LED_R_Ramp.ramp(250, 2000);
+        //LED_R_Ramp.ramp(250, 2000);
         break;
 
       case 's':
-        LED_R_Ramp.ramp(25,1000);
+        //LED_R_Ramp.ramp(25,1000);
         break;
 
       case 'd':
-        test_flash = true;
+        //test_flash = true;
         break;
 
       case 'a':
-        test_flash = false;
+        break;
+        //test_flash = false;
     }
 
     outputSerialDebug_action.check(); 
