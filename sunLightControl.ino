@@ -589,8 +589,7 @@ void loop() {
     bools.screen = 1;
     burnabySunriseOffset_new = burnabySunriseOffset;
     burnabySunsetOffset_new = burnabySunsetOffset;
-    //burnabySunriseOffset_new = burnabySunriseOffset;
-    //burnabySunsetOffset_new = burnabySunsetOffset;
+    
     outputLCD(1);
   }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
