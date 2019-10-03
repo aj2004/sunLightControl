@@ -1,5 +1,5 @@
 {
-    "port": "COM18",
+    "port": "COM10",
     "board": "arduino:avr:nano",
     "sketch": "sunLightControl.ino",
     "output": "build",

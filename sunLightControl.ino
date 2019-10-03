@@ -62,7 +62,7 @@
 // Comment out the following line to disable debugging. (put // on the left)
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
   #define SERIAL_BAUD 115200
@@ -156,9 +156,9 @@
 struct boolByte
 {
     bool screen:1;
-    bool lcdFading:1;
     bool timedOut:1;
-    bool var3:1;
+    bool anyPbPressed:1;
+    bool anyPbReleased:1;
     bool var4:1;
     bool var5:1;
     bool var6:1;
@@ -502,6 +502,27 @@ void loop() {
   pbRight.read();
   pbEnter.read();
 
+  bools.anyPbReleased = false;
+  bools.anyPbPressed = false;
+
+  if (pbUp.wasReleased()
+  || pbDown.wasReleased()
+  || pbLeft.wasReleased()
+  || pbRight.wasReleased()
+  || pbEnter.wasReleased())
+  {
+    bools.anyPbReleased = true;
+  }
+
+  if (pbUp.wasPressed()
+  || pbDown.wasPressed()
+  || pbLeft.wasPressed()
+  || pbRight.wasPressed()
+  || pbEnter.wasPressed())
+  {
+    bools.anyPbPressed = true;
+  }
+
   
 
 
@@ -552,25 +573,13 @@ void loop() {
   //------ Misc. Stuff ------//
   //-------------------------//
 
-  if (pbUp.wasReleased() || pbDown.wasReleased() || pbLeft.wasReleased() || pbRight.wasReleased() || pbEnter.wasReleased()){
+
+
+  if (bools.anyPbReleased){
     pbRepeatTimer = 0;
   }
 
-  if (pbUp.wasPressed() || pbDown.wasPressed() || pbLeft.wasPressed() || pbRight.wasPressed() || pbEnter.wasPressed()){
-    // If ANY button is pressed, reset the screenTimeoutTimer
-    screenTimeoutTimer = millis();
-    
-    lcd.display();
-    // If the display happened to be timed out, change to screen 0 and brighten the LCD backlight
-    if (bools.timedOut) {
-      lcd.backlight();
-      LCD_Backlight_PWM.ramp(255, 500);
-      bools.screen = 0;
-      outputLCD(0);
-    }
-    // screen's not timed out anymore...
-    bools.timedOut = false;
-  }
+
 
   if (bools.screen == 0 && pbRight.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
@@ -578,26 +587,28 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 1;
-    burnabySunriseOffset_new = EEPROM.read(ADDR_SUNRISE_OFFSET);
-    burnabySunsetOffset_new = EEPROM.read(ADDR_SUNSET_OFFSET);
+    burnabySunriseOffset_new = burnabySunriseOffset;
+    burnabySunsetOffset_new = burnabySunsetOffset;
     //burnabySunriseOffset_new = burnabySunriseOffset;
     //burnabySunsetOffset_new = burnabySunsetOffset;
     outputLCD(1);
-  }
+  }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
     lcd.clear();
-    cursorPos.row = 0;
-    cursorPos.col = 0;
+    //cursorPos.row = 0;
+    //cursorPos.col = 0;
     bools.screen = 0;
     outputLCD(0);
-  }
+  }else
 
   if (bools.screen == 1){
     //outputLCD(1);
-    lcd.setCursor(cursorPos.col, cursorPos.row);
+    //lcd.setCursor(cursorPos.col, cursorPos.row);
 
     if (cursorPos.col == 0){
+
+      
 
       if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
       if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
@@ -607,53 +618,57 @@ void loop() {
       
     }
 
-    else if (cursorPos.col == 12){
+    else if (cursorPos.col > 0){
 
-      if (pbLeft.wasPressed())cursorPos.col = 0;
-      if (pbRight.wasPressed()){
+      if (pbLeft.wasPressed()){
+        cursorPos.col = 0;
+        burnabySunriseOffset_new = burnabySunriseOffset;
+        burnabySunsetOffset_new = burnabySunsetOffset;
+      }
+
+      else if (pbRight.wasPressed()){
         if (cursorPos.row == 0) EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset_new);
         if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset_new);
         cursorPos.col = 0;
       }
 
-      if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
-        if (burnabySunriseOffset_new <= 120){
+      else if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
+        if (burnabySunriseOffset_new < 120){
           if (cursorPos.row == 0) burnabySunriseOffset_new++;
+          if (burnabySunriseOffset_new >= 100){ cursorPos.col = 13; }
+          else { cursorPos.col = 12; }
         }
-        if (burnabySunsetOffset_new <= 120){
+        if (burnabySunsetOffset_new < 120){
           if (cursorPos.row == 1) burnabySunsetOffset_new++;
+          if (burnabySunsetOffset_new >= 100){ cursorPos.col = 13; }
+          else { cursorPos.col = 12; }
         }
-        pbRepeatTimer += REPEAT_MS;
+        pbRepeatTimer += REPEAT_MS; // repeat again after X ms
+        if (pbRepeatTimer > (REPEAT_MS * 10)){
+          pbRepeatTimer -= (REPEAT_MS / 2); // double speed
+        }
+        outputLCD(1);
       }
 
-      if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
-        if (burnabySunriseOffset_new >= -120){
+      else if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
+        if (burnabySunriseOffset_new > -120){
           if (cursorPos.row == 0) burnabySunriseOffset_new--;
+          if (burnabySunriseOffset_new <= -100){ cursorPos.col = 13; }
+          else { cursorPos.col = 12; }
         }
-        if (burnabySunsetOffset_new >= -120){
+        if (burnabySunsetOffset_new > -120){
           if (cursorPos.row == 1) burnabySunsetOffset_new--;
+          if (burnabySunsetOffset_new <= -100){ cursorPos.col = 13; }
+          else { cursorPos.col = 12; }
         }
-        pbRepeatTimer += REPEAT_MS;
+        pbRepeatTimer += REPEAT_MS; // repeat again after X ms
+        if (pbRepeatTimer > (REPEAT_MS * 10)){
+          pbRepeatTimer -= (REPEAT_MS / 2); // double speed
+        }
+        outputLCD(1);
       }
 
-    }
-
-    
-
-
-
-    // If the cursor has been moved, update the screen
-    if ((cursorPos.row != cursorPos_prev.row) || (cursorPos.col != cursorPos_prev.col)){
-      
-      cursorPos_prev.row = cursorPos.row;
-      cursorPos_prev.col = cursorPos.col;
-      outputLCD(1);
-
-    }
-
-    if ((burnabySunriseOffset_new != burnabySunriseOffset) || (burnabySunsetOffset_new != burnabySunsetOffset)){
-      outputLCD(1);
-    }
+    }    
 
   }
 
@@ -683,8 +698,6 @@ void loop() {
     }
   #endif
   outputLED_digital(PIN_LED_L, FLASH_SLOW);
-  
-
   
   // Control the relay/lights.
   //TODO: outputRelay();
@@ -732,6 +745,30 @@ void loop() {
 
     outputSerialDebug_action.check(); 
   #endif
+
+  if (bools.anyPbPressed){
+    if(bools.screen == 1){ outputLCD(1); }
+    
+    // reset the screenTimeoutTimer
+    screenTimeoutTimer = millis();
+      
+    
+    // If the display happened to be timed out, change to screen 0 and brighten the LCD backlight
+    if (bools.timedOut) {
+      
+      lcd.display();
+      lcd.clear();
+      lcd.backlight();
+      LCD_Backlight_PWM.ramp(255, 500);
+      bools.screen = 0;
+      outputLCD(0);
+    }
+    // screen's not timed out anymore...
+    bools.timedOut = false;    
+    
+  }
+
+
 
 
 }// END OF MAIN LOOP
@@ -916,33 +953,68 @@ void outputLCD(int LCDscreen){
       break;
 
     case 1:
-      
+      screenTimeoutTimer = millis();
       lcd.noBlink();
       // Print the Sunrise Offset
       lcd.setCursor(0, 0);
-      lcd.print("  Sunrise");
-            if(burnabySunriseOffset_new < 0){lcd.print(" ");}
-      else  if(burnabySunriseOffset_new >= 0){lcd.print(" +");}
-      lcd.print(burnabySunriseOffset_new);
-      lcd.print("m");
+
+      #ifdef DEBUG
+        lcd.print("  col=");
+        lcd.print(cursorPos.col);
+        lcd.print("  ");
+      #else
+        lcd.print("  Sunrise");
+              
+              if(burnabySunriseOffset_new < 0){lcd.print(" -");}
+        else  if(burnabySunriseOffset_new >= 0){lcd.print(" +");}
+        if( abs(burnabySunriseOffset_new) / 10 < 1 ){lcd.print(" ");}
+        lcd.print( abs(burnabySunriseOffset_new) );
+        lcd.print("m");
+        if( abs(burnabySunriseOffset_new) < 100 ){lcd.print(" ");}
+      #endif
 
       // Print the Sunset Offset
       lcd.setCursor(0, 1);
-      lcd.print("   Sunset");
-            if(burnabySunsetOffset_new < 0){lcd.print(" ");}
-      else  if(burnabySunsetOffset_new >= 0){lcd.print(" +");}
-      lcd.print(burnabySunsetOffset_new);
-      lcd.print("m");
+
+      #ifdef DEBUG
+        lcd.print("  row=");
+        lcd.print(cursorPos.row);
+        lcd.print("  ");
+      #else
+        lcd.print("   Sunset");
+              
+              if(burnabySunsetOffset_new < 0){lcd.print(" -");}
+        else  if(burnabySunsetOffset_new >= 0){lcd.print(" +");}
+        if( abs(burnabySunsetOffset_new) / 10 < 1 ){lcd.print(" ");}
+        lcd.print( abs(burnabySunsetOffset_new) );
+        lcd.print("m");
+        if( abs(burnabySunsetOffset_new) < 100 ){lcd.print(" ");}
+      #endif
       
 
       lcd.setCursor(0, cursorPos.row);
       lcd.print(">");
-      if(cursorPos.col > 1){
-        lcd.blink();
+
+      lcd.setCursor(LCD_COLUMNS - 1, 0);
+      if (burnabySunriseOffset_new != burnabySunriseOffset){
+        lcd.print("*");
+      }else{
+        lcd.print(" ");
+      }
+      lcd.setCursor(LCD_COLUMNS - 1, 1);
+      if (burnabySunsetOffset_new != burnabySunsetOffset){
+        lcd.print("*");
+      }else{
+        lcd.print(" ");
+      }
+      if(cursorPos.col > 2){
+        lcd.cursor();
       }
       else{
-        lcd.noBlink();
+        lcd.noCursor();
       }
+
+      lcd.setCursor(cursorPos.col, cursorPos.row);
 
       
       
@@ -991,7 +1063,7 @@ void outputRelay(void){
 
 
 
-
+#ifdef DEBUG
 void outputSerialDebug(void){
   
     
@@ -1054,4 +1126,5 @@ void outputSerialDebug(void){
     
   
 }
+#endif
 
