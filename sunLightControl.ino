@@ -715,8 +715,8 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 1;
-    burnabySunriseOffset_new = burnabySunriseOffset;
-    burnabySunsetOffset_new = burnabySunsetOffset;
+    burnabySunriseOffset_temp = burnabySunriseOffset;
+    burnabySunsetOffset_temp = burnabySunsetOffset;
     outputLCD(1);
   
   }else
