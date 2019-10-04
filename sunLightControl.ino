@@ -715,9 +715,10 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 1;
-    burnabySunriseOffset_temp = burnabySunriseOffset;
-    burnabySunsetOffset_temp = burnabySunsetOffset;
+    burnabySunriseOffset_new = burnabySunriseOffset;
+    burnabySunsetOffset_new = burnabySunsetOffset;
     outputLCD(1);
+  
   }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
