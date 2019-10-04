@@ -62,7 +62,8 @@
 // Comment out the following line to disable debugging. (put // on the left)
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
-//#define DEBUG
+
+#define DEBUG
 
 #ifdef DEBUG
   #define SERIAL_BAUD 115200
@@ -159,7 +160,7 @@ struct boolByte
     bool timedOut:1;
     bool anyPbPressed:1;
     bool anyPbReleased:1;
-    bool var4:1;
+    bool timeAdjust:1;
     bool var5:1;
     bool var6:1;
     bool var7:1;
@@ -176,19 +177,42 @@ uint32_t screenTimeoutTimer = 0;
 uint16_t currentMinutes = 0;
 // these will hold the sunrise/sunset, in minutes after midnight
 uint16_t burnabySunrise;
-uint16_t burnabySunset ;
+uint16_t burnabySunset;
+
+// These are used to detect a change in the DST state
+bool burnabyDST = false;
+bool burnabyDST_last = false;
+
+
 // Sunrise time, in HH:mm 24-hour format
 char timeBurnabySunrise[] = "00:00";
 // Sunset time, in HH:mm 24-hour format
 char timeBurnabySunset[] = "00:00";
+
+
+#ifdef DEBUG
+  uint16_t debugSunrise;
+  uint16_t debugSunset;
+  bool debugDST;
+  bool debugDST_last;
+  char debugTimeSunrise[] = "00:00";
+  char debugTimeSunset[] = "00:00";
+#endif
 
 // These will hold the +/- offset
 // Range is -127...+127 (approx. +/- 2 hours)
 int8_t burnabySunriseOffset = 0;
 int8_t burnabySunsetOffset = 0;
 
-int8_t burnabySunriseOffset_new = 0;
-int8_t burnabySunsetOffset_new = 0;
+int8_t burnabySunriseOffset_temp = 0;
+int8_t burnabySunsetOffset_temp = 0;
+
+uint16_t timeYear_temp;
+uint8_t  timeMonth_temp;
+uint8_t  timeDay_temp;
+uint8_t  timeHour_temp;
+uint8_t  timeMinute_temp;
+uint8_t  timeSecond_temp;
 
 // These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
 // NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
@@ -268,7 +292,6 @@ PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
  * invert (true|false) = invert the logic. if enabled, and button wired as sinking, pressing the button will return true.
  * dbTime (32-bit int) = debounce time, in milliseconds. 20 is generally a good minimum.
  * 
- * 
  * These functions are included in this library:
  * 
  * uint8_t read(); = updates the inputs. this should be called at the start of the main loop()
@@ -277,9 +300,8 @@ PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
  * uint8_t wasPressed(); = one-shot rising. returns true for one scan/loop when button pressed
  * uint8_t wasReleased(); = one-shot falling. returns true for one scan/loop when button released
  * uint8_t pressedFor(uint32_t ms); = time-delay on, in milliseconds. returns true if button held for this long
+ *    Note: you can do -> if(pb.pressedFor(ms)){ some stuff; ms += repeatInterval;} to enable auto-repeat
  * uint8_t releasedFor(uint32_t ms); = time-delay off, in milliseconds. returns true if button released for this long
- * uint32_t lastChange(); = elapsed program time, in milliseconds, when the last button event occured.
-                         use with millis();, which returns the current elapsed program time.
  *                          
  * Each button should be wired to the input pin and COM/GND.
  * Enable the pull-up resistor and inverting logic for each button
@@ -288,8 +310,8 @@ PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
  * 
  */
 
-//    |Name  | Pin Number  |Pull Up|Invrt|Debnc|
-//----|------|-------------|-------|-----|-----|
+//    |Name  | Pin Number  |Pull Up|Invrt|Debnc Time|
+//----|------|-------------|-------|-----|----------|
 Button pbUp   (PIN_PB_UP,     true, true, PB_DBNC_MS);
 Button pbDown (PIN_PB_DOWN,   true, true, PB_DBNC_MS);
 Button pbLeft (PIN_PB_LEFT,   true, true, PB_DBNC_MS);
@@ -308,14 +330,14 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 
 
 
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+//                                          \\
+//  5. FUNCTION DECLARATIONS                \\
+//                                          \\
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
 
-///////////////////////////////////////////////
-//  5. FUNCTION DECLARATIONS                 //
-///////////////////////////////////////////////
 
 
-bool burnabyDST;
-bool burnabyDST_last;
 
 /* Call this function to illuminate and/or flash the LED(s)
  * Arguments:
@@ -365,10 +387,11 @@ void outputRelay(void);
 
 
 
-
-///////////////////////////////////////////////
-//  6. setup() -- MAIN FUNCTION (runs once)  //
-///////////////////////////////////////////////
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+//                                          \\
+//  6. setup() -- MAIN FUNCTION (runs once) \\
+//                                          \\
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
 
 /* setup() function: runs once
  * 1. Init Serial, LCD, RTC, I/O, 
@@ -414,27 +437,32 @@ void setup() {
   digitalWrite(PIN_RELAY, LOW);
   
 
-  // Setup the LED pins here.
-  pinMode(PIN_LED_R, OUTPUT);
-  digitalWrite(PIN_LED_R, HIGH);
-  pinMode(PIN_LED_G, OUTPUT);
-  digitalWrite(PIN_LED_G, HIGH);
-  pinMode(PIN_LED_B, OUTPUT);
-  digitalWrite(PIN_LED_B, HIGH);
-  // And the onboard LED: Labelled 'L'
-  pinMode(PIN_LED_L, OUTPUT);
-  digitalWrite(PIN_LED_L, LOW);
+  // Setup the RGB LED pins here.
+  // Set them all to outputs for both digital or PWM
+  // Turn them all HIGH for common ANODE(+) to turn them OFF
+  pinMode(PIN_LED_R, OUTPUT); digitalWrite(PIN_LED_R, HIGH); // red cathode
+  pinMode(PIN_LED_G, OUTPUT); digitalWrite(PIN_LED_G, HIGH); // blue cathode
+  pinMode(PIN_LED_B, OUTPUT); digitalWrite(PIN_LED_B, HIGH); // green cathode
+  // and the onboard LED, labelled 'L'
+  pinMode(PIN_LED_L, OUTPUT); digitalWrite(PIN_LED_L, LOW); // L anode (non-inverted logic)
+
+  // Setup the LCD anode here
+  // The anode may be jumpered on the LCD I2C backpack board to keep it at 5V always
+  // It may then be turned on/off by using the backlight() or noBacklight() functions
+  // If the jumper is removed, the anode may be wired to a PWM pin.
+  // This allows brightness control with 8-bit resolution
+  // The backlight may still be enabled/disabled with the aforementioned functions.
+  pinMode(PIN_LCD_A, OUTPUT); analogWrite(PIN_LCD_A, 255);
+  
 
 
-  // Initialize the LCD & clear any junk left in screen memory
+  // Initialize the LCD
+  // This will also turn on the display and clear the screen
   lcd.init();
-  lcd.clear();
+  // Enable the backlight
   lcd.backlight();
-  // analogWrite is an 8-bit PWM output
-  analogWrite(PIN_LCD_A, 255);
-  LCD_Backlight_PWM.ramp(255, 500);
-  //set the cursor to 0,0 (top-left)
-  lcd.home();
+  // Brighten the backlight to full-on
+  LCD_Backlight_PWM.ramp(255, 1);
 
     
 
@@ -449,25 +477,26 @@ void setup() {
     Serial.println(BURNABY_UTC_OFFSET);
     Serial.println();
 
-    
-    
     // LCD Debug Enabled Message
     // This will show the configured serial baud rate
-    //         0123456789012345
+    // column: 0123456789012345
     lcd.print("Debug Enabled");
     lcd.setCursor(0,1);
     lcd.print("Baud: ");
     lcd.print(SERIAL_BAUD);
 
     // This function literally delays the program for X milliseconds
+    // This is to allow the baud rate to be viewed
     delay(1500);
-
-    lcd.clear();
-    outputLCD(0);
+    
 
   #endif
 
-  // Clear the LCD one more time for good measure.
+  
+  // clear the screen
+  lcd.clear();
+  // and display the main screen
+  outputLCD(0);
   
 }
 
@@ -478,10 +507,12 @@ void setup() {
 
 
 
-
-///////////////////////////////////////////////
-//  7. loop() -- MAIN FUNCTION               //
-///////////////////////////////////////////////
+                        
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+//                                          \\
+//  7. loop() -- MAIN FUNCTION              \\
+//                                          \\
+///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
 
 // Main function: runs forever
 void loop() {
@@ -550,6 +581,13 @@ void loop() {
   burnabySunrise  = burnaby.sunrise(now.year(), now.month(), now.day(), burnabyDST);
   burnabySunset   = burnaby.sunset(now.year(), now.month(), now.day(), burnabyDST);
 
+  #ifdef DEBUG
+    debugSunrise = burnaby.sunrise(1970, 1, 1, debugDST);
+    debugSunset  = burnaby.sunset(1970, 1, 1, debugDST);
+    Dusk2Dawn::min2str(debugTimeSunrise, debugSunrise);
+    Dusk2Dawn::min2str(debugTimeSunset, debugSunset);
+  #endif
+
   if (burnabyDST != burnabyDST_last){
     // If the current DST is different than the last loop (it has changed), adjust the time
     if(burnabyDST){
@@ -579,7 +617,97 @@ void loop() {
     pbRepeatTimer = 0;
   }
 
+  if (bools.screen == 0 && bools.timeAdjust == false && (pbUp.wasPressed() || pbDown.wasPressed())){
+    bools.timeAdjust = true;
+    timeMonth_temp  = now.month();
+    timeDay_temp    = now.day();
+    timeHour_temp   = now.hour();
+    timeMinute_temp = now.minute();
+    timeSecond_temp = now.second();
+  }
 
+  if (bools.screen == 0 && bools.timeAdjust == true){
+
+    switch (cursorPos.col){
+
+      case 0:
+        if (pbUp.wasPressed()){
+          timeMonth_temp++;
+        } else
+        if (pbDown.wasPressed()){
+          timeMonth_temp--;
+        } else
+        if (pbLeft.wasPressed()){
+          bools.timeAdjust = false;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 5;
+        }
+
+        case 5:
+        if (pbUp.wasPressed()){
+          timeDay_temp++;
+        } else
+        if (pbDown.wasPressed()){
+          timeDay_temp--;
+        } else
+        if (pbLeft.wasPressed()){
+          cursorPos.col = 0;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 9;
+        }
+
+        case 9:
+        if (pbUp.wasPressed()){
+          timeHour_temp++;
+        } else
+        if (pbDown.wasPressed()){
+          timeHour_temp--;
+        } else
+        if (pbLeft.wasPressed()){
+          cursorPos.col = 5;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 12;
+        }
+
+        case 12:
+        if (pbUp.wasPressed()){
+          timeMinute_temp++;
+        } else
+        if (pbDown.wasPressed()){
+          timeMinute_temp--;
+        } else
+        if (pbLeft.wasPressed()){
+          cursorPos.col = 9;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 15;
+        }
+
+        case 15:
+        if (pbUp.wasPressed()){
+          timeSecond_temp++;
+        } else
+        if (pbDown.wasPressed()){
+          timeSecond_temp--;
+        } else
+        if (pbLeft.wasPressed()){
+          cursorPos.col = 12;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 0;
+          bools.timeAdjust = false;
+          rtc.adjust(now.year(), timeMonth_temp, timeDay_temp, timeHour_temp, timeMinute_temp, timeSecond_temp);
+        }
+        
+
+
+
+    }
+
+  }
 
   if (bools.screen == 0 && pbRight.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
@@ -587,28 +715,20 @@ void loop() {
     cursorPos.row = 0;
     cursorPos.col = 0;
     bools.screen = 1;
-    burnabySunriseOffset_new = burnabySunriseOffset;
-    burnabySunsetOffset_new = burnabySunsetOffset;
-    //burnabySunriseOffset_new = burnabySunriseOffset;
-    //burnabySunsetOffset_new = burnabySunsetOffset;
+    burnabySunriseOffset_temp = burnabySunriseOffset;
+    burnabySunsetOffset_temp = burnabySunsetOffset;
     outputLCD(1);
   }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
     lcd.clear();
-    //cursorPos.row = 0;
-    //cursorPos.col = 0;
     bools.screen = 0;
     outputLCD(0);
   }else
 
   if (bools.screen == 1){
-    //outputLCD(1);
-    //lcd.setCursor(cursorPos.col, cursorPos.row);
-
+    
     if (cursorPos.col == 0){
-
-      
 
       if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
       if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
@@ -622,26 +742,26 @@ void loop() {
 
       if (pbLeft.wasPressed()){
         cursorPos.col = 0;
-        burnabySunriseOffset_new = burnabySunriseOffset;
-        burnabySunsetOffset_new = burnabySunsetOffset;
+        burnabySunriseOffset_temp = burnabySunriseOffset;
+        burnabySunsetOffset_temp = burnabySunsetOffset;
       }
 
       else if (pbRight.wasPressed()){
-        if (cursorPos.row == 0) EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset_new);
-        if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset_new);
+        if (cursorPos.row == 0) EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset_temp);
+        if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset_temp);
         cursorPos.col = 0;
       }
 
       else if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
-        if (burnabySunriseOffset_new < 120){
-          if (cursorPos.row == 0) burnabySunriseOffset_new++;
-          if (burnabySunriseOffset_new >= 100){ cursorPos.col = 13; }
-          else { cursorPos.col = 12; }
+        if (burnabySunriseOffset_temp < 120){
+          if (cursorPos.row == 0) burnabySunriseOffset_temp++;
+          { cursorPos.col = 12; }
+          if (burnabySunriseOffset_temp >= 100){ cursorPos.col = 13; }
         }
         if (burnabySunsetOffset_new < 120){
           if (cursorPos.row == 1) burnabySunsetOffset_new++;
+          { cursorPos.col = 12; }
           if (burnabySunsetOffset_new >= 100){ cursorPos.col = 13; }
-          else { cursorPos.col = 12; }
         }
         pbRepeatTimer += REPEAT_MS; // repeat again after X ms
         if (pbRepeatTimer > (REPEAT_MS * 10)){
@@ -651,15 +771,15 @@ void loop() {
       }
 
       else if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
-        if (burnabySunriseOffset_new > -120){
-          if (cursorPos.row == 0) burnabySunriseOffset_new--;
-          if (burnabySunriseOffset_new <= -100){ cursorPos.col = 13; }
-          else { cursorPos.col = 12; }
+        if (burnabySunriseOffset_temp > -120){
+          if (cursorPos.row == 0) burnabySunriseOffset_temp--;
+          { cursorPos.col = 12; }
+          if (burnabySunriseOffset_temp <= -100){ cursorPos.col = 13; }
         }
-        if (burnabySunsetOffset_new > -120){
-          if (cursorPos.row == 1) burnabySunsetOffset_new--;
-          if (burnabySunsetOffset_new <= -100){ cursorPos.col = 13; }
-          else { cursorPos.col = 12; }
+        if (burnabySunsetOffset_temp > -120){
+          if (cursorPos.row == 1) burnabySunsetOffset_temp--;
+          { cursorPos.col = 12; }
+          if (burnabySunsetOffset_temp <= -100){ cursorPos.col = 13; }
         }
         pbRepeatTimer += REPEAT_MS; // repeat again after X ms
         if (pbRepeatTimer > (REPEAT_MS * 10)){
@@ -693,7 +813,7 @@ void loop() {
 
   #ifdef DEBUG
     if(pbLeft.isPressed()){
-      outputLED_RGB(255,0,0, FLASH_FAST);
+      //outputLED_RGB(255,0,0, FLASH_FAST);
       
     }
   #endif
@@ -727,18 +847,19 @@ void loop() {
     switch (SerialKey){
 
       case 'w':
-        //LED_R_Ramp.ramp(250, 2000);
+        debugDST = true;
         break;
 
       case 's':
-        //LED_R_Ramp.ramp(25,1000);
+        debugDST = false;
         break;
 
       case 'd':
-        //test_flash = true;
+        digitalWrite(PIN_LED_R, LOW);
         break;
 
       case 'a':
+        digitalWrite(PIN_LED_R, HIGH);
         break;
         //test_flash = false;
     }
@@ -920,7 +1041,8 @@ void outputLCD(int LCDscreen){
       lcd.noBlink();
       lcd.setCursor(0,0);
 
-      lcd.print(monthNameShort[now.month()]);
+      if bools.timeAdjust == false;
+      lcd.print(monthNameShort[ (bools.timeAdjust) ? now.month() : timeMonth_temp ]);
       lcd.print(".");
       if (now.day() < 10) { lcd.print(0); } // Pad single digit with a leading zero
       lcd.print(now.day());
@@ -944,9 +1066,20 @@ void outputLCD(int LCDscreen){
       lcd.write(254);
       lcd.write(254);
 
-      
       lcd.print("S.");
       lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
+
+      #ifdef DEBUG
+        lcd.setCursor(0,1);
+        lcd.print("R.");
+        lcd.print(debugTimeSunrise);
+
+        lcd.write(254);
+        lcd.write(254);
+
+        lcd.print("S.");
+        lcd.print(debugTimeSunset);
+      #endif
 
       
 
@@ -965,12 +1098,12 @@ void outputLCD(int LCDscreen){
       #else
         lcd.print("  Sunrise");
               
-              if(burnabySunriseOffset_new < 0){lcd.print(" -");}
-        else  if(burnabySunriseOffset_new >= 0){lcd.print(" +");}
-        if( abs(burnabySunriseOffset_new) / 10 < 1 ){lcd.print(" ");}
-        lcd.print( abs(burnabySunriseOffset_new) );
+              if(burnabySunriseOffset_temp < 0){lcd.print(" -");}
+        else  if(burnabySunriseOffset_temp >= 0){lcd.print(" +");}
+        if( abs(burnabySunriseOffset_temp) / 10 < 1 ){lcd.print(" ");}
+        lcd.print( abs(burnabySunriseOffset_temp) );
         lcd.print("m");
-        if( abs(burnabySunriseOffset_new) < 100 ){lcd.print(" ");}
+        if( abs(burnabySunriseOffset_temp) < 100 ){lcd.print(" ");}
       #endif
 
       // Print the Sunset Offset
@@ -996,13 +1129,13 @@ void outputLCD(int LCDscreen){
       lcd.print(">");
 
       lcd.setCursor(LCD_COLUMNS - 1, 0);
-      if (burnabySunriseOffset_new != burnabySunriseOffset){
+      if (burnabySunriseOffset_temp != burnabySunriseOffset){
         lcd.print("*");
       }else{
         lcd.print(" ");
       }
       lcd.setCursor(LCD_COLUMNS - 1, 1);
-      if (burnabySunsetOffset_new != burnabySunsetOffset){
+      if (burnabySunsetOffset_temp != burnabySunsetOffset){
         lcd.print("*");
       }else{
         lcd.print(" ");
@@ -1113,12 +1246,23 @@ void outputSerialDebug(void){
         Serial.print("Min. after midnight: ");
       Serial.println(burnabySunrise);
       Serial.println();
+      
 
         Serial.print("Burnaby sunset: ");
       Serial.println(timeBurnabySunset);
         Serial.print("Min. after midnight: ");
       Serial.println(burnabySunset);
       Serial.println();
+
+        Serial.print("1970 Sunrise: ");
+      Serial.println(debugTimeSunrise);
+        Serial.print("1970 Sunset: ");
+      Serial.println(debugTimeSunset);
+        Serial.print("debugDST = ");
+      Serial.println(debugDST);
+      Serial.println();
+      
+
         Serial.print("Scan Time: ");
       Serial.println(scanTimeAverage);
       Serial.println();
