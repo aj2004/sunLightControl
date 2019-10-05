@@ -157,11 +157,11 @@
 struct boolByte
 {
     bool screen:1;
+    bool timingOut:1;
     bool timedOut:1;
     bool anyPbPressed:1;
     bool anyPbReleased:1;
     bool timeAdjust:1;
-    bool var5:1;
     bool var6:1;
     bool var7:1;
 }__attribute__((packed));
@@ -611,7 +611,13 @@ void loop() {
   //------ Misc. Stuff ------//
   //-------------------------//
 
-
+  // IF TIMED OUT, JUMP TO NEAR THE END OF loop()
+  if (bools.timedOut){
+    goto LBL_TIMED_OUT;
+  }
+  if (bools.timingOut){
+    goto LBL_TIMING_OUT;
+  }
 
   if (bools.anyPbReleased){
     pbRepeatTimer = 0;
@@ -624,7 +630,7 @@ void loop() {
     timeHour_temp   = now.hour();
     timeMinute_temp = now.minute();
     timeSecond_temp = now.second();
-  }
+  } else
 
   if (bools.screen == 0 && bools.timeAdjust == true){
 
@@ -643,8 +649,9 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 5;
         }
+        break;
 
-        case 5:
+      case 5:
         if (pbUp.wasPressed()){
           timeDay_temp++;
         } else
@@ -657,8 +664,9 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 9;
         }
+        break;
 
-        case 9:
+      case 9:
         if (pbUp.wasPressed()){
           timeHour_temp++;
         } else
@@ -671,8 +679,9 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 12;
         }
+        break;
 
-        case 12:
+      case 12:
         if (pbUp.wasPressed()){
           timeMinute_temp++;
         } else
@@ -685,8 +694,9 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 15;
         }
+        break;
 
-        case 15:
+      case 15:
         if (pbUp.wasPressed()){
           timeSecond_temp++;
         } else
@@ -699,15 +709,16 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 0;
           bools.timeAdjust = false;
-          rtc.adjust(now.year(), timeMonth_temp, timeDay_temp, timeHour_temp, timeMinute_temp, timeSecond_temp);
+          rtc.adjust(DateTime(2019, timeMonth_temp, timeDay_temp, timeHour_temp, timeMinute_temp, timeSecond_temp));
         }
+        break;
         
 
 
 
     }
 
-  }
+  } else
 
   if (bools.screen == 0 && pbRight.wasPressed()){
     // if at the left-most screen and "right" was pressed, go right
@@ -759,10 +770,10 @@ void loop() {
           { cursorPos.col = 12; }
           if (burnabySunriseOffset_temp >= 100){ cursorPos.col = 13; }
         }
-        if (burnabySunsetOffset_new < 120){
-          if (cursorPos.row == 1) burnabySunsetOffset_new++;
+        if (burnabySunsetOffset_temp < 120){
+          if (cursorPos.row == 1) burnabySunsetOffset_temp++;
           { cursorPos.col = 12; }
-          if (burnabySunsetOffset_new >= 100){ cursorPos.col = 13; }
+          if (burnabySunsetOffset_temp >= 100){ cursorPos.col = 13; }
         }
         pbRepeatTimer += REPEAT_MS; // repeat again after X ms
         if (pbRepeatTimer > (REPEAT_MS * 10)){
@@ -792,16 +803,26 @@ void loop() {
     }    
 
   }
+  // IF TIMING OUT, JUMP TO HERE
+  LBL_TIMING_OUT:
+  if (bools.screen == 0 && !bools.timeAdjust) outputLCD(0);
+  // IF TIMED OUT, JUMP TO HERE
+  LBL_TIMED_OUT:
 
+  LCD_Backlight_PWM.update();
 
   if (millis() - screenTimeoutTimer > (SCREEN_TIMEOUT_SEC * 1000)){
     // If the system times out, set the flag and dim the LCD
-    bools.timedOut = true;
+    if(!bools.timedOut){bools.timingOut = true;}
     LCD_Backlight_PWM.ramp(0, 1500);
     if(LCD_Backlight_PWM.rampDoneOS){
+      
+      bools.timedOut = true;
       lcd.noBacklight();
       lcd.clear();
       lcd.noBlink();
+
+      bools.timingOut = false;
     }
     
   }
@@ -822,11 +843,6 @@ void loop() {
   
   // Control the relay/lights.
   //TODO: outputRelay();
-  LCD_Backlight_PWM.update();
-   // Display screen on LCD (timed action)
-  //if (!bools.timedOut) outputLCD_action.check();
-  if (!bools.timedOut && bools.screen == 0) outputLCD(0);
-
 
   #ifdef DEBUG
     // If DEBUG is enabled, send some info to the Serial Port (timed action)
@@ -868,7 +884,12 @@ void loop() {
     outputSerialDebug_action.check(); 
   #endif
 
+  
+
+  
+
   if (bools.anyPbPressed){
+    if(bools.timeAdjust){ outputLCD(0); }
     if(bools.screen == 1){ outputLCD(1); }
     
     // reset the screenTimeoutTimer
@@ -1034,43 +1055,54 @@ void outputLCD(int LCDscreen){
    * lcd.print(variable/string); to print something. Data types cannot be combined.
    */ 
 
+  uint8_t _LCDmonth;
+  uint8_t _LCDday;
+  uint8_t _LCDhour;
+  uint8_t _LCDminute;
+  uint8_t _LCDsecond;
+
+
+
+  _LCDmonth   = (bools.timeAdjust) ? timeMonth_temp  : now.month();
+  _LCDday     = (bools.timeAdjust) ? timeDay_temp    : now.day();
+  _LCDhour    = (bools.timeAdjust) ? timeHour_temp   : now.hour();
+  _LCDminute  = (bools.timeAdjust) ? timeMinute_temp : now.minute();
+  _LCDsecond  = (bools.timeAdjust) ? timeSecond_temp : now.second();
+  
+
   switch (LCDscreen) {
     case 0:
       // 0 = MAIN SCREEN
       // LINE 0
       // Print the date
-      lcd.noBlink();
+      lcd.noCursor();
       lcd.setCursor(0,0);
 
-      if bools.timeAdjust == false;
-      lcd.print(monthNameShort[ (bools.timeAdjust) ? now.month() : timeMonth_temp ]);
+      
+      
+      lcd.print(monthNameShort[_LCDmonth]);
       lcd.print(".");
-      if (now.day() < 10) { lcd.print(0); } // Pad single digit with a leading zero
-      lcd.print(now.day());
+      if (_LCDday < 10) { lcd.print(0); } // Pad single digit with a leading zero
+      lcd.print(_LCDday);
+      
+      
       lcd.write(254);
       lcd.write(254);
 
-      if (now.hour() < 10) { lcd.print(0); } // Pad single digit with a leading zero
-      lcd.print(now.hour());
+      
+      if (_LCDhour < 10) { lcd.print(0); } // Pad single digit with a leading zero
+      lcd.print(_LCDhour);
       lcd.print(":");
-      if (now.minute() < 10){ lcd.print(0); } // Pad single digit with a leading zero
-      lcd.print(now.minute());
+      if (_LCDminute < 10){ lcd.print(0); } // Pad single digit with a leading zero
+      lcd.print(_LCDminute);
       lcd.print(":");
-      if (now.second() < 10){ lcd.print(0); } // Pad single digit with a leading zero
-      lcd.print(now.second());
+      if (_LCDsecond < 10){ lcd.print(0); } // Pad single digit with a leading zero
+      lcd.print(_LCDsecond);
 
       // LINE 1
       // Print today's sunrise
-      lcd.setCursor(0,1);
-      lcd.print("R.");
-      lcd.print(timeBurnabySunrise); // Single digits are padded with zero elsewhere
-      lcd.write(254);
-      lcd.write(254);
 
-      lcd.print("S.");
-      lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
-
-      #ifdef DEBUG
+      /*#ifdef DEBUG
         lcd.setCursor(0,1);
         lcd.print("R.");
         lcd.print(debugTimeSunrise);
@@ -1080,9 +1112,22 @@ void outputLCD(int LCDscreen){
 
         lcd.print("S.");
         lcd.print(debugTimeSunset);
-      #endif
+      #else*/
+        lcd.setCursor(0,1);
+        lcd.print("R.");
+        lcd.print(timeBurnabySunrise); // Single digits are padded with zero elsewhere
+        lcd.write(254);
+        lcd.write(254);
 
+        lcd.print("S.");
+        lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
+      //#endif
       
+
+      if (bools.timeAdjust){ lcd.cursor(); }
+      else { lcd.noCursor(); }
+
+      lcd.setCursor(cursorPos.col, cursorPos.row);
 
       break;
 
@@ -1266,6 +1311,12 @@ void outputSerialDebug(void){
 
         Serial.print("Scan Time: ");
       Serial.println(scanTimeAverage);
+      Serial.println();
+
+      Serial.print("timing out: ");
+      Serial.println(bools.timingOut);
+      Serial.print("timed out: ");
+      Serial.println(bools.timedOut);
       Serial.println();
     }
     
