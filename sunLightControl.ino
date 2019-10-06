@@ -173,10 +173,10 @@ struct boolByte
     bool timingOut:1;
     bool timedOut:1;
     bool anyPbPressed:1;
+    bool anyPbHeld:1;
     bool anyPbReleased:1;
     bool timeAdjust:1;
     bool timeDayLast:1;
-    bool var7:1;
 }__attribute__((packed));
 // make a new variable of type "boolByte"
 // address each member like so: bools.screen = 0;
@@ -512,7 +512,9 @@ void setup() {
 
   // Just before the loop() starts, reset any timers.
   screenTimeoutTimer = millis();
-  scanTimeCurr = micros();
+  #ifdef DEBUG
+    scanTimeCurr = micros();
+  #endif
   
 }
 
@@ -550,9 +552,11 @@ void loop() {
   pbLeft.read();
   pbRight.read();
   pbEnter.read();
-
-  bools.anyPbReleased = false;
+  
   bools.anyPbPressed = false;
+  bools.anyPbHeld = false;
+  bools.anyPbReleased = false;
+  
 
   if (pbUp.wasReleased()
   || pbDown.wasReleased()
@@ -571,6 +575,16 @@ void loop() {
   {
     bools.anyPbPressed = true;
   }
+
+  if (  pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)
+  ||  pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)
+  ||  pbLeft.pressedFor(REPEAT_MS + pbRepeatTimer)
+  || pbRight.pressedFor(REPEAT_MS + pbRepeatTimer)
+  || pbEnter.pressedFor(REPEAT_MS + pbRepeatTimer))
+  {
+    bools.anyPbHeld = true;
+  }
+
 
   
 
@@ -657,7 +671,7 @@ void loop() {
 
   if (bools.screen == 0 && bools.timeAdjust == true){
 
-    daysInMonth [2] = (leapYear(timeYear_temp)) ? 29 : 28;
+    
     
 
     switch (cursorPos.col){
@@ -784,23 +798,7 @@ void loop() {
         break;
       }
 
-      
-      // Time adjustment limits
-      /*
-      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
-      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
-      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
-      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
-      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
-      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
-      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
-      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
-      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
-      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
-      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
-      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
-      */
-      
+      daysInMonth [2] = (leapYear(timeYear_temp)) ? 29 : 28;
       if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}
       if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}
       if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}
@@ -818,34 +816,6 @@ void loop() {
       if (timeSecond_temp < 0) {timeMinute_temp--; timeSecond_temp = 59;}
       if (timeDay_temp == daysInMonth[timeMonth_temp]) { bools.timeDayLast = true; }
       
-     /*if (bools.timeDayLast) {timeDay_temp = daysInMonth[timeMonth_temp];}
-      if (timeDay_temp == daysInMonth[timeMonth_temp]){bools.timeDayLast = true;}
-      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
-      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
-      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
-      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
-      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
-      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
-      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
-      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
-      if (bools.timeDayLast && )
-      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
-      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
-      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
-      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
-      */
-
-
-
-
-
-
-
-
-
-
-
-
 
   } else
 
@@ -857,7 +827,6 @@ void loop() {
     bools.screen = 1;
     burnabySunriseOffset_temp = burnabySunriseOffset;
     burnabySunsetOffset_temp = burnabySunsetOffset;
-    outputLCD(1);
   
   }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
@@ -866,32 +835,34 @@ void loop() {
     bools.screen = 0;
     cursorPos.row = 0;
     cursorPos.col = 0;
-    outputLCD(0);
   }else
   if (bools.screen == 1){
-    
     if (cursorPos.col == 0){
-
       if (cursorPos.row > 0 && pbUp.wasPressed())cursorPos.row--;
       if (cursorPos.row < LCD_ROWS-1 && pbDown.wasPressed())cursorPos.row++;
-      
       if (pbLeft.wasPressed())bools.screen = 0;
-      if (pbRight.wasPressed())cursorPos.col = 12;
+      if (pbRight.wasPressed()){
+        cursorPos.col = 12;
+        bools.timeAdjust = true;
+      }
       
     }
 
     else if (cursorPos.col > 0){
-
       if (pbLeft.wasPressed()){
         cursorPos.col = 0;
         burnabySunriseOffset_temp = burnabySunriseOffset;
         burnabySunsetOffset_temp = burnabySunsetOffset;
+        bools.timeAdjust = false;
       }
 
       else if (pbRight.wasPressed()){
         if (cursorPos.row == 0) EEPROM.update(ADDR_SUNRISE_OFFSET, burnabySunriseOffset_temp);
         if (cursorPos.row == 1) EEPROM.update(ADDR_SUNSET_OFFSET, burnabySunsetOffset_temp);
+        burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
+        burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
         cursorPos.col = 0;
+        bools.timeAdjust = false;
       }
 
       else if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
@@ -909,7 +880,6 @@ void loop() {
         if (pbRepeatTimer > (REPEAT_MS * 10)){
           pbRepeatTimer -= (REPEAT_MS / 2); // double speed
         }
-        outputLCD(1);
       }
 
       else if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
@@ -927,15 +897,14 @@ void loop() {
         if (pbRepeatTimer > (REPEAT_MS * 10)){
           pbRepeatTimer -= (REPEAT_MS / 2); // double speed
         }
-        outputLCD(1);
       }
-
     }    
-
   }
   // IF TIMING OUT, JUMP TO HERE
   LBL_TIMING_OUT:
+
   if (bools.screen == 0 && !bools.timeAdjust) outputLCD(0);
+
   // IF TIMED OUT, JUMP TO HERE
   LBL_TIMED_OUT:
 
@@ -946,15 +915,12 @@ void loop() {
     if(!bools.timedOut){bools.timingOut = true;}
     LCD_Backlight_PWM.ramp(0, 1500);
     if(LCD_Backlight_PWM.rampDoneOS){
-      
+      bools.timingOut = false;
       bools.timedOut = true;
       lcd.noBacklight();
       lcd.clear();
       lcd.noBlink();
-
-      bools.timingOut = false;
     }
-    
   }
 
   //-------------------------//
@@ -975,7 +941,7 @@ void loop() {
   //TODO: outputRelay();
 
   #ifdef DEBUG
-    // If DEBUG is enabled, send some info to the Serial Port (timed action)
+    // If DEBUG is enabled, calculate the average scan time
     scanTimeCount++;
     if (scanTimeCount >= scanTimePreset){
       scanTimeCurr = micros();
@@ -987,10 +953,6 @@ void loop() {
 
       scanTimeCount = 0;
     }
-
-    /* if (test_flash){
-      outputLED_digital(9, FLASH_FAST);
-    }*/
     
     char SerialKey;
     SerialKey = Serial.read();
@@ -1015,37 +977,30 @@ void loop() {
         //test_flash = false;
     }
     
-    //outputSerialDebug_action.check(); 
   #endif
 
   
 
-  if(bools.timeAdjust){
-    outputLCD(0);
+  if(bools.timeAdjust){ // KEEP AWAKE while adjusting
     screenTimeoutTimer = millis();
-    
   }
 
-  if (bools.anyPbPressed){
-    
-    if(bools.screen == 1){ outputLCD(1); }
-    
+  if (!bools.timingOut && (bools.anyPbPressed || bools.anyPbHeld)){ // WAKE-UP and keep awake with any button press
     // reset the screenTimeoutTimer
     screenTimeoutTimer = millis();
-      
-    
+
     // If the display happened to be timed out, change to screen 0 and brighten the LCD backlight
-    if (bools.timedOut) {
-      
+    if (bools.timedOut) {  
       lcd.display();
       lcd.clear();
       lcd.backlight();
       LCD_Backlight_PWM.ramp(255, 500);
       bools.screen = 0;
-      outputLCD(0);
     }
     // screen's not timed out anymore...
-    bools.timedOut = false;    
+    bools.timedOut = false;
+    // always update the LCD when a button is pressed/held
+    outputLCD(bools.screen);
     
   }
 
@@ -1230,27 +1185,15 @@ void outputLCD(int LCDscreen){
       // LINE 1
       // Print today's sunrise
 
-      /*#ifdef DEBUG
-        lcd.setCursor(0,1);
-        lcd.print("R.");
-        lcd.print(debugTimeSunrise);
+      lcd.setCursor(0,1);
+      lcd.print("R.");
+      lcd.print(timeBurnabySunrise); // Single digits are padded with zero elsewhere
 
-        lcd.write(254);
-        lcd.write(254);
+      lcd.write(254);
+      lcd.write(254);
 
-        lcd.print("S.");
-        lcd.print(debugTimeSunset);
-      #else*/
-        lcd.setCursor(0,1);
-        lcd.print("R.");
-        lcd.print(timeBurnabySunrise); // Single digits are padded with zero elsewhere
-        lcd.write(254);
-        lcd.write(254);
-
-        lcd.print("S.");
-        lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
-      //#endif
-      
+      lcd.print("S.");
+      lcd.print(timeBurnabySunset); // Single digits are padded with zero elsewhere
 
       if (bools.timeAdjust){ lcd.cursor(); }
       else { lcd.noCursor(); }
