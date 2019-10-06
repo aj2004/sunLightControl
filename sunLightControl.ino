@@ -64,7 +64,7 @@
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
   #define SERIAL_BAUD 115200
@@ -706,11 +706,13 @@ void loop() {
         if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeDay_temp++;
           pbRepeatTimer += REPEAT_MS;
+          bools.timeDayLast = false;
           if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeDay_temp--;
           pbRepeatTimer += REPEAT_MS;
+          bools.timeDayLast = false;
           if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
@@ -798,21 +800,25 @@ void loop() {
       if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
       if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
       */
-      /*
-      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
-      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
-      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
-      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
-      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
-      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
-      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
-      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
-      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
-      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
-      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
-      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
-      */
-     if (bools.timeDayLast) {timeDay_temp = daysInMonth[timeMonth_temp];}
+      
+      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}
+      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}
+      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}
+      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}
+      if (timeDay_temp > daysInMonth[timeMonth_temp]){
+        if (!bools.timeDayLast) {timeMonth_temp++; timeDay_temp = 1;}
+        else {timeDay_temp = daysInMonth[timeMonth_temp];}
+      }
+      if (timeDay_temp < 1) {timeMonth_temp--; timeDay_temp = daysInMonth[timeMonth_temp]; bools.timeDayLast = true; }
+      if (timeHour_temp   > 23){timeDay_temp++; timeHour_temp = 0; bools.timeDayLast = false;}
+      if (timeHour_temp   < 0) {timeDay_temp--; timeHour_temp = 23; bools.timeDayLast = false;}
+      if (timeMinute_temp > 59) {timeHour_temp++; timeMinute_temp = 0;}
+      if (timeMinute_temp < 0) {timeHour_temp--; timeMinute_temp = 59;}
+      if (timeSecond_temp > 59) {timeMinute_temp++; timeSecond_temp = 0;}
+      if (timeSecond_temp < 0) {timeMinute_temp--; timeSecond_temp = 59;}
+      if (timeDay_temp == daysInMonth[timeMonth_temp]) { bools.timeDayLast = true; }
+      
+     /*if (bools.timeDayLast) {timeDay_temp = daysInMonth[timeMonth_temp];}
       if (timeDay_temp == daysInMonth[timeMonth_temp]){bools.timeDayLast = true;}
       if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
       if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
@@ -822,11 +828,12 @@ void loop() {
       if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
       if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
       if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
+      if (bools.timeDayLast && )
       if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
       if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
       if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
       if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
-      
+      */
 
 
 
@@ -857,9 +864,10 @@ void loop() {
     // if at the left-most screen and "right" was pressed, go right
     lcd.clear();
     bools.screen = 0;
+    cursorPos.row = 0;
+    cursorPos.col = 0;
     outputLCD(0);
   }else
-
   if (bools.screen == 1){
     
     if (cursorPos.col == 0){
@@ -1201,7 +1209,7 @@ void outputLCD(int LCDscreen){
       // Print the date
       lcd.noCursor();
       lcd.setCursor(0,0);
-      if (_LCDyear < 10) { lcd.print(0); }
+      if (_LCDyear < 10) { lcd.print(0);}
       lcd.print(_LCDyear);
       
       lcd.print(monthNameShort[_LCDmonth]);
@@ -1282,12 +1290,12 @@ void outputLCD(int LCDscreen){
       #else
         lcd.print("   Sunset");
               
-              if(burnabySunsetOffset_new < 0){lcd.print(" -");}
-        else  if(burnabySunsetOffset_new >= 0){lcd.print(" +");}
-        if( abs(burnabySunsetOffset_new) / 10 < 1 ){lcd.print(" ");}
-        lcd.print( abs(burnabySunsetOffset_new) );
+              if(burnabySunsetOffset_temp < 0){lcd.print(" -");}
+        else  if(burnabySunsetOffset_temp >= 0){lcd.print(" +");}
+        if( abs(burnabySunsetOffset_temp) / 10 < 1 ){lcd.print(" ");}
+        lcd.print( abs(burnabySunsetOffset_temp) );
         lcd.print("m");
-        if( abs(burnabySunsetOffset_new) < 100 ){lcd.print(" ");}
+        if( abs(burnabySunsetOffset_temp) < 100 ){lcd.print(" ");}
       #endif
       
 
