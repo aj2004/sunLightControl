@@ -41,6 +41,7 @@
 #include <EEPROM.h>
 #include "PWM_RampLinear.h"
 #include "isDST_Canada.h"
+#include "leapYear.h"
 
 
 
@@ -138,6 +139,18 @@
 #define FLASH_FAST 4
 
 
+// These are EEPROM addresses.
+// Each address is 8 bits (1 byte)
+// Offsets are in minutes, so 1 Byte is enough for 2 hours (+/- 127 min)
+// DST_last is a BOOL, so 1 Byte is more than enough
+// NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
+// Avoid excessive writing by verifying that the code does not continuously write to an address.
+// Using the update() function will first READ and then WRITE ONLY if the value differs.
+#define ADDR_DST_LAST       10
+#define ADDR_SUNRISE_OFFSET 20
+#define ADDR_SUNSET_OFFSET  30
+
+
 
 
 
@@ -162,7 +175,7 @@ struct boolByte
     bool anyPbPressed:1;
     bool anyPbReleased:1;
     bool timeAdjust:1;
-    bool var6:1;
+    bool timeDayLast:1;
     bool var7:1;
 }__attribute__((packed));
 // make a new variable of type "boolByte"
@@ -207,18 +220,17 @@ int8_t burnabySunsetOffset = 0;
 int8_t burnabySunriseOffset_temp = 0;
 int8_t burnabySunsetOffset_temp = 0;
 
-uint16_t timeYear_temp;
-uint8_t  timeMonth_temp;
-uint8_t  timeDay_temp;
-uint8_t  timeHour_temp;
-uint8_t  timeMinute_temp;
-uint8_t  timeSecond_temp;
+// These are SIGNED because adjustment could go to (-1)
+int16_t timeYear_temp;
+int8_t  timeMonth_temp;
+int8_t  timeDay_temp;
+int8_t  timeHour_temp;
+int8_t  timeMinute_temp;
+int8_t  timeSecond_temp;
 
-// These are EEPROM addresses. Offsets are in minutes, so 1 Byte is enough
-// NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
-//       So, avoid excessive writing.
-const int ADDR_SUNRISE_OFFSET = 20;
-const int ADDR_SUNSET_OFFSET = 30;
+uint8_t daysInMonth [] = { 31,31,28,31,30,31,30,31,31,30,31,30,31 };
+
+
 
 // These can be used when displaying the date, or for debugging
 // use something like: lcd.print(dayName[now.dayOfTheWeek]) or dayNameShort[now.dayOfTheWeek]
@@ -250,6 +262,7 @@ two_nibbles cursorPos_prev;
   uint16_t scanTimeCount = 0;
   uint32_t scanTimeCurr = 0;
   uint32_t scanTimePrev = 0;
+  uint32_t scanTimeDiff = 0;
   uint32_t scanTimeAverage = 0;
 
 #endif
@@ -376,7 +389,7 @@ void outputRelay(void);
 #ifdef DEBUG
   // Call this function when DEBUG is enabled to output info to the Serial Port
   void outputSerialDebug(void);
-  TimedAction outputSerialDebug_action = TimedAction(2000, outputSerialDebug);
+  //TimedAction outputSerialDebug_action = TimedAction(2000, outputSerialDebug);
 #endif
 
 
@@ -491,12 +504,15 @@ void setup() {
     
 
   #endif
-
   
   // clear the screen
   lcd.clear();
   // and display the main screen
   outputLCD(0);
+
+  // Just before the loop() starts, reset any timers.
+  screenTimeoutTimer = millis();
+  scanTimeCurr = micros();
   
 }
 
@@ -525,6 +541,8 @@ void loop() {
   // Grab the stored Offsets from EEPROM
   burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
   burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
+
+  burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
 
   // Grab the current state of the pushbuttons.
   pbUp.read();
@@ -591,15 +609,18 @@ void loop() {
   if (burnabyDST != burnabyDST_last){
     // If the current DST is different than the last loop (it has changed), adjust the time
     if(burnabyDST){
-    rtc.adjust(DateTime(now.year(),now.month(),now.day(),now.hour()+1,now.minute(),now.second()));
+      rtc.adjust(DateTime(now.year(),now.month(),now.day(),now.hour()+1,now.minute(),now.second()));
     }
     else if(!burnabyDST){
-    rtc.adjust(DateTime(now.year(),now.month(),now.day(),now.hour()-1,now.minute(),now.second()));
+      rtc.adjust(DateTime(now.year(),now.month(),now.day(),now.hour()-1,now.minute(),now.second()));
     }
     // and equate the comparison variable so we're not writing the RTC chip every loop
-    burnabyDST_last = burnabyDST;
+    EEPROM.update(ADDR_DST_LAST, burnabyDST);
+    burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
   }
   
+  // Leap Year Calculation
+  daysInMonth [2] = (leapYear(now.year())) ? 29 : 28;
 
   // convert the sunrise to 24-hour time for display
   Dusk2Dawn::min2str(timeBurnabySunrise, burnabySunrise);
@@ -625,6 +646,8 @@ void loop() {
 
   if (bools.screen == 0 && bools.timeAdjust == false && (pbUp.wasPressed() || pbDown.wasPressed())){
     bools.timeAdjust = true;
+    cursorPos.col = 1;
+    timeYear_temp   = now.year();
     timeMonth_temp  = now.month();
     timeDay_temp    = now.day();
     timeHour_temp   = now.hour();
@@ -634,59 +657,100 @@ void loop() {
 
   if (bools.screen == 0 && bools.timeAdjust == true){
 
+    daysInMonth [2] = (leapYear(timeYear_temp)) ? 29 : 28;
+    
+
     switch (cursorPos.col){
 
-      case 0:
-        if (pbUp.wasPressed()){
-          timeMonth_temp++;
+      case 1: // YEAR adjust
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeYear_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
-        if (pbDown.wasPressed()){
-          timeMonth_temp--;
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeYear_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
           bools.timeAdjust = false;
+          cursorPos.col = 0;
         } else
         if (pbRight.wasPressed()){
-          cursorPos.col = 5;
+          cursorPos.col = 3;
         }
         break;
 
-      case 5:
-        if (pbUp.wasPressed()){
-          timeDay_temp++;
+      case 3: // MONTH adjust
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeMonth_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
-        if (pbDown.wasPressed()){
-          timeDay_temp--;
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeMonth_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
-          cursorPos.col = 0;
+          cursorPos.col = 1;
+        } else
+        if (pbRight.wasPressed()){
+          cursorPos.col = 6;
+        }
+        
+        break;
+
+      case 6: // DAY adjust
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeDay_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
+        } else
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
+          timeDay_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
+        } else
+        if (pbLeft.wasPressed()){
+          cursorPos.col = 3;
         } else
         if (pbRight.wasPressed()){
           cursorPos.col = 9;
         }
+        
         break;
 
-      case 9:
-        if (pbUp.wasPressed()){
+      case 9: // HOUR adjust
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeHour_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
-        if (pbDown.wasPressed()){
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeHour_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
-          cursorPos.col = 5;
+          cursorPos.col = 6;
         } else
         if (pbRight.wasPressed()){
           cursorPos.col = 12;
         }
         break;
 
-      case 12:
-        if (pbUp.wasPressed()){
+      case 12: // MINUTE adjust
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeMinute_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
-        if (pbDown.wasPressed()){
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeMinute_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
           cursorPos.col = 9;
@@ -696,12 +760,16 @@ void loop() {
         }
         break;
 
-      case 15:
-        if (pbUp.wasPressed()){
+      case 15: // SECOND adjust & SAVE
+        if (pbUp.wasPressed() || pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeSecond_temp++;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
-        if (pbDown.wasPressed()){
+        if (pbDown.wasPressed() || pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)){
           timeSecond_temp--;
+          pbRepeatTimer += REPEAT_MS;
+          if (pbRepeatTimer > (REPEAT_MS * 10)){pbRepeatTimer -= (REPEAT_MS / 2);}
         } else
         if (pbLeft.wasPressed()){
           cursorPos.col = 12;
@@ -709,14 +777,68 @@ void loop() {
         if (pbRight.wasPressed()){
           cursorPos.col = 0;
           bools.timeAdjust = false;
-          rtc.adjust(DateTime(2019, timeMonth_temp, timeDay_temp, timeHour_temp, timeMinute_temp, timeSecond_temp));
+          rtc.adjust(DateTime(timeYear_temp, timeMonth_temp, timeDay_temp, timeHour_temp, timeMinute_temp, timeSecond_temp));
         }
         break;
-        
+      }
+
+      
+      // Time adjustment limits
+      /*
+      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
+      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
+      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
+      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
+      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
+      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
+      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
+      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
+      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
+      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
+      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
+      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
+      */
+      /*
+      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
+      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
+      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
+      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
+      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
+      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
+      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
+      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
+      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
+      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
+      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
+      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
+      */
+     if (bools.timeDayLast) {timeDay_temp = daysInMonth[timeMonth_temp];}
+      if (timeDay_temp == daysInMonth[timeMonth_temp]){bools.timeDayLast = true;}
+      if (timeSecond_temp > 59)                           {timeMinute_temp++;     timeSecond_temp = 0;}                         // wrap to 00sec AND next minute
+      if (timeSecond_temp < 0)                            {timeMinute_temp--;     timeSecond_temp = 59;}                        // wrap to 59sec AND prev minute
+      if (timeMinute_temp > 59)                           {timeHour_temp++;       timeMinute_temp = 0;}                         // wrap to 00min AND next hour
+      if (timeMinute_temp < 0)                            {timeHour_temp--;       timeMinute_temp = 59;}                        // wrap to 59min AND prev hour
+      if (timeHour_temp   > 23)                           {timeDay_temp++;        timeHour_temp = 0;}                           // wrap to 00h (12am) AND next day
+      if (timeHour_temp   < 0)                            {timeDay_temp--;        timeHour_temp = 23;}                          // wrap to 23h (11pm) AND prev day
+      if (timeDay_temp    < 1)                            {timeMonth_temp--;      timeDay_temp = daysInMonth[timeMonth_temp];}  // wrap to prev month AND last day
+      if (timeDay_temp    > daysInMonth[timeMonth_temp])  {timeMonth_temp++;      timeDay_temp = 1;}                            // wrap to next month AND first day
+      if (timeMonth_temp  > 12)                           {timeYear_temp++;       timeMonth_temp = 1;}                          // wrap to next year AND January
+      if (timeMonth_temp  < 1)                            {timeYear_temp--;       timeMonth_temp = 12;}                         // wrap to prev year AND December
+      if (timeYear_temp   > 2099)                         {                       timeYear_temp = 2099;}                        // clamp the maximum year
+      if (timeYear_temp   < 2000)                         {                       timeYear_temp = 2000;}                        // clamp the minimum year
+      
 
 
 
-    }
+
+
+
+
+
+
+
+
+
 
   } else
 
@@ -848,10 +970,14 @@ void loop() {
     // If DEBUG is enabled, send some info to the Serial Port (timed action)
     scanTimeCount++;
     if (scanTimeCount >= scanTimePreset){
-      scanTimeCount = 0;
       scanTimeCurr = micros();
-      scanTimeAverage = (scanTimeCurr-scanTimePrev)/scanTimePreset;
+      scanTimeDiff = scanTimeCurr-scanTimePrev;
+      scanTimeAverage = scanTimeDiff/scanTimeCount;
       scanTimePrev = scanTimeCurr;
+
+      outputSerialDebug();
+
+      scanTimeCount = 0;
     }
 
     /* if (test_flash){
@@ -880,16 +1006,20 @@ void loop() {
         break;
         //test_flash = false;
     }
-
-    outputSerialDebug_action.check(); 
+    
+    //outputSerialDebug_action.check(); 
   #endif
 
   
 
-  
+  if(bools.timeAdjust){
+    outputLCD(0);
+    screenTimeoutTimer = millis();
+    
+  }
 
   if (bools.anyPbPressed){
-    if(bools.timeAdjust){ outputLCD(0); }
+    
     if(bools.screen == 1){ outputLCD(1); }
     
     // reset the screenTimeoutTimer
@@ -1055,19 +1185,13 @@ void outputLCD(int LCDscreen){
    * lcd.print(variable/string); to print something. Data types cannot be combined.
    */ 
 
-  uint8_t _LCDmonth;
-  uint8_t _LCDday;
-  uint8_t _LCDhour;
-  uint8_t _LCDminute;
-  uint8_t _LCDsecond;
-
-
-
-  _LCDmonth   = (bools.timeAdjust) ? timeMonth_temp  : now.month();
-  _LCDday     = (bools.timeAdjust) ? timeDay_temp    : now.day();
-  _LCDhour    = (bools.timeAdjust) ? timeHour_temp   : now.hour();
-  _LCDminute  = (bools.timeAdjust) ? timeMinute_temp : now.minute();
-  _LCDsecond  = (bools.timeAdjust) ? timeSecond_temp : now.second();
+  
+  uint8_t _LCDyear    = (bools.timeAdjust) ? timeYear_temp % 2000   : now.year() % 2000;
+  uint8_t _LCDmonth   = (bools.timeAdjust) ? timeMonth_temp  : now.month();
+  uint8_t _LCDday     = (bools.timeAdjust) ? timeDay_temp    : now.day();
+  uint8_t _LCDhour    = (bools.timeAdjust) ? timeHour_temp   : now.hour();
+  uint8_t _LCDminute  = (bools.timeAdjust) ? timeMinute_temp : now.minute();
+  uint8_t _LCDsecond  = (bools.timeAdjust) ? timeSecond_temp : now.second();
   
 
   switch (LCDscreen) {
@@ -1077,19 +1201,15 @@ void outputLCD(int LCDscreen){
       // Print the date
       lcd.noCursor();
       lcd.setCursor(0,0);
-
-      
+      if (_LCDyear < 10) { lcd.print(0); }
+      lcd.print(_LCDyear);
       
       lcd.print(monthNameShort[_LCDmonth]);
-      lcd.print(".");
       if (_LCDday < 10) { lcd.print(0); } // Pad single digit with a leading zero
       lcd.print(_LCDday);
       
-      
-      lcd.write(254);
       lcd.write(254);
 
-      
       if (_LCDhour < 10) { lcd.print(0); } // Pad single digit with a leading zero
       lcd.print(_LCDhour);
       lcd.print(":");
@@ -1263,12 +1383,12 @@ void outputSerialDebug(void){
     /* if the elapsed program time since the last time this block
      * of code was run is greater than the interval, run the code
      */
-    if ((currTime_Serial - prevTime_Serial) >= interval_Serial){
+    //if ((currTime_Serial - prevTime_Serial) >= interval_Serial){
 
       // reset the last time the code was run to the current time
       prevTime_Serial = currTime_Serial;
       
-      Serial.println("============================");
+      /*Serial.println("============================");
       //DEBUG: print the current date/time
       Serial.println("Current date/time:");
         Serial.print(dayNameShort[now.dayOfTheWeek()]);
@@ -1317,8 +1437,25 @@ void outputSerialDebug(void){
       Serial.println(bools.timingOut);
       Serial.print("timed out: ");
       Serial.println(bools.timedOut);
-      Serial.println();
-    }
+      Serial.println();*/
+
+      
+    //}
+    
+      Serial.println("============================");
+        Serial.print("Count = ");
+      Serial.println(scanTimeCount);
+        Serial.print("CurrMicros = ");
+      Serial.println(scanTimeCurr);
+        Serial.print("Difference = ");
+      Serial.println(scanTimeDiff);
+        Serial.print("Average = ");
+      Serial.println(scanTimeAverage);
+      Serial.println("============================");
+
+    
+
+    
     
   
 }
