@@ -1,4 +1,4 @@
-# sunLightController
+# sunLightControl
 Arduino on/off timer based on sunrise/sunset with LCD interface
 
 The sketch is written for an Arduino Nano/Uno, DS3231 RTC, and 16x2 I2C LCD.
