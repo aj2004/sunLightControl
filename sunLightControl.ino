@@ -64,7 +64,7 @@
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
   #define SERIAL_BAUD 115200
@@ -540,9 +540,7 @@ void loop() {
   //------ Read Inputs ------//
   //-------------------------//
 
-  // Grab the stored Offsets from EEPROM
-  burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
-  burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
+  
 
   burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
 
@@ -553,20 +551,12 @@ void loop() {
   pbRight.read();
   pbEnter.read();
   
-  bools.anyPbPressed = false;
-  bools.anyPbHeld = false;
-  bools.anyPbReleased = false;
+  
+  
+  
   
 
-  if (pbUp.wasReleased()
-  || pbDown.wasReleased()
-  || pbLeft.wasReleased()
-  || pbRight.wasReleased()
-  || pbEnter.wasReleased())
-  {
-    bools.anyPbReleased = true;
-  }
-
+  bools.anyPbPressed = false;
   if (pbUp.wasPressed()
   || pbDown.wasPressed()
   || pbLeft.wasPressed()
@@ -576,14 +566,7 @@ void loop() {
     bools.anyPbPressed = true;
   }
 
-  if (  pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)
-  ||  pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)
-  ||  pbLeft.pressedFor(REPEAT_MS + pbRepeatTimer)
-  || pbRight.pressedFor(REPEAT_MS + pbRepeatTimer)
-  || pbEnter.pressedFor(REPEAT_MS + pbRepeatTimer))
-  {
-    bools.anyPbHeld = true;
-  }
+  
 
 
   
@@ -613,12 +596,7 @@ void loop() {
   burnabySunrise  = burnaby.sunrise(now.year(), now.month(), now.day(), burnabyDST);
   burnabySunset   = burnaby.sunset(now.year(), now.month(), now.day(), burnabyDST);
 
-  #ifdef DEBUG
-    debugSunrise = burnaby.sunrise(1970, 1, 1, debugDST);
-    debugSunset  = burnaby.sunset(1970, 1, 1, debugDST);
-    Dusk2Dawn::min2str(debugTimeSunrise, debugSunrise);
-    Dusk2Dawn::min2str(debugTimeSunset, debugSunset);
-  #endif
+  
 
   if (burnabyDST != burnabyDST_last){
     // If the current DST is different than the last loop (it has changed), adjust the time
@@ -633,6 +611,47 @@ void loop() {
     burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
   }
   
+  
+  
+  // IF TIMED OUT, JUMP TO NEAR THE END OF loop()
+  if (bools.timedOut){
+    goto LBL_TIMED_OUT;
+  }
+
+
+
+
+  // Grab the stored Offsets from EEPROM
+  burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
+  burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
+
+  bools.anyPbHeld = false;
+  if (  pbUp.pressedFor(REPEAT_MS + pbRepeatTimer)
+  ||  pbDown.pressedFor(REPEAT_MS + pbRepeatTimer)
+  ||  pbLeft.pressedFor(REPEAT_MS + pbRepeatTimer)
+  || pbRight.pressedFor(REPEAT_MS + pbRepeatTimer)
+  || pbEnter.pressedFor(REPEAT_MS + pbRepeatTimer))
+  {
+    bools.anyPbHeld = true;
+  }
+  
+  bools.anyPbReleased = false;
+  if (pbUp.wasReleased()
+  || pbDown.wasReleased()
+  || pbLeft.wasReleased()
+  || pbRight.wasReleased()
+  || pbEnter.wasReleased())
+  {
+    bools.anyPbReleased = true;
+  }
+
+  #ifdef DEBUG
+    debugSunrise = burnaby.sunrise(1970, 1, 1, debugDST);
+    debugSunset  = burnaby.sunset(1970, 1, 1, debugDST);
+    Dusk2Dawn::min2str(debugTimeSunrise, debugSunrise);
+    Dusk2Dawn::min2str(debugTimeSunset, debugSunset);
+  #endif
+  
   // Leap Year Calculation
   daysInMonth [2] = (leapYear(now.year())) ? 29 : 28;
 
@@ -646,10 +665,7 @@ void loop() {
   //------ Misc. Stuff ------//
   //-------------------------//
 
-  // IF TIMED OUT, JUMP TO NEAR THE END OF loop()
-  if (bools.timedOut){
-    goto LBL_TIMED_OUT;
-  }
+  
   if (bools.timingOut){
     goto LBL_TIMING_OUT;
   }
@@ -940,7 +956,8 @@ void loop() {
   outputLED_digital(PIN_LED_L, FLASH_SLOW);
   
   // Control the relay/lights.
-  //TODO: outputRelay();
+  //TODO: 
+  outputRelay();
 
   #ifdef DEBUG
     // If DEBUG is enabled, calculate the average scan time
@@ -1292,23 +1309,27 @@ void outputRelay(void){
    */
 
   // If the current time is after sunset...
-  if (currentMinutes > (burnabySunset + burnabySunsetOffset)){
+  if (currentMinutes >= (burnabySunset + burnabySunsetOffset)){
     // Turn the lights ON.
     digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(GREEN, SOLID);
+    outputLED_RGB(255, 0, 255, SOLID);
+    
   }
 
   // Or if the current time is before sunrise...
-  else if (currentMinutes < (burnabySunrise + burnabySunriseOffset)){
+  else if (currentMinutes <= (burnabySunrise + burnabySunriseOffset)){
     // Turn the lights ON.
     digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(GREEN, SOLID);
+    outputLED_RGB(255, 0, 255, SOLID);
+    
   }
 
   // Otherwise, it's daytime.
   else {
     // Turn the lights OFF.
     digitalWrite(PIN_RELAY, LOW);
+    outputLED_RGB(255, 255, 0, SOLID);
+    
   }
 
 }
@@ -1404,6 +1425,20 @@ void outputSerialDebug(void){
       Serial.println(scanTimeDiff);
         Serial.print("Average = ");
       Serial.println(scanTimeAverage);
+        Serial.print("currentMin = ");
+      Serial.println(currentMinutes);
+        Serial.print("Sunset = ");
+      Serial.println(burnabySunset);
+        Serial.print("setOffset = ");
+      Serial.println(burnabySunsetOffset);
+        Serial.print("Sunrise = ");
+      Serial.println(burnabySunrise);
+        Serial.print("riseOffset = ");
+      Serial.println(burnabySunriseOffset);
+
+
+
+
       Serial.println("============================");
 
     
@@ -1413,4 +1448,3 @@ void outputSerialDebug(void){
   
 }
 #endif
-
