@@ -515,6 +515,11 @@ void setup() {
   #ifdef DEBUG
     scanTimeCurr = micros();
   #endif
+
+  burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
+  // Grab the stored Offsets from EEPROM
+  burnabySunriseOffset = EEPROM.read(ADDR_SUNRISE_OFFSET);
+  burnabySunsetOffset = EEPROM.read(ADDR_SUNSET_OFFSET);
   
 }
 
@@ -542,7 +547,7 @@ void loop() {
 
   
 
-  burnabyDST_last = EEPROM.read(ADDR_DST_LAST);
+  
 
   // Grab the current state of the pushbuttons.
   pbUp.read();
@@ -922,10 +927,6 @@ void loop() {
   LBL_TIMING_OUT:
 
   if (bools.screen == 0 && !bools.timeAdjust) outputLCD(0);
-
-  // IF TIMED OUT, JUMP TO HERE
-  LBL_TIMED_OUT:
-
   LCD_Backlight_PWM.update();
 
   if (millis() - screenTimeoutTimer > (SCREEN_TIMEOUT_SEC * 1000)){
@@ -940,6 +941,13 @@ void loop() {
       lcd.noBlink();
     }
   }
+
+  // IF TIMED OUT, JUMP TO HERE
+  LBL_TIMED_OUT:
+
+  
+
+  
 
   //-------------------------//
   //----- Write Outputs -----//
