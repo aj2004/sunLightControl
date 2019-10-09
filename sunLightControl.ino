@@ -1,28 +1,28 @@
-/* 2018-08-09
- * 
- * 
- * Outdoor light timer based on sunrise and sunset.
- * This program is meant to control the puck lights (in the soffet) out front
- * so that the timer doesn't have to be reset twice a year and so the lights
- * turn on/off at the same time each day, relative to the daylight.
- *  
- * 
- * *********************
- * * TABLE OF CONTENTS *
- * *********************
- * 
- * 1. #includes (libraries)
- * 2. #defines
- *  2a. Pin Definitions
- *  2b. Config Values
- * 3. Global variables
- * 4. Object creation
- * 5. Function declarations
- * 6. void setup()  (main function, runs once)
- * 7. void loop()   (main function, runs forever)
- * 8. function prototypes
- * 
- */
+// 2018-08-09
+// 
+// 
+// Outdoor light timer based on sunrise and sunset.
+// This program is meant to control the puck lights (in the soffet) out front
+// so that the timer doesn't have to be reset twice a year and so the lights
+// turn on/off at the same time each day, relative to the daylight.
+//  
+//
+// *********************
+// * TABLE OF CONTENTS *
+// *********************
+// 
+// 1. #includes (libraries)
+// 2. #defines
+//  2a. Pin Definitions
+//  2b. Config Values
+// 3. Global variables
+// 4. Object creation
+// 5. Function declarations
+// 6. void setup()  (main function, runs once)
+// 7. void loop()   (main function, runs forever)
+// 8. function prototypes
+// 
+//
 
 
 
@@ -50,7 +50,7 @@
 
 
 ///////////////////////////////////////////////
-//  2. DEFINED CONSTANTS                     //
+//  2. DEFINED ALIASES & SETTINGS            //
 ///////////////////////////////////////////////
 
 //DEBUGGING:
@@ -64,16 +64,17 @@
 // Baud rate may be defined here. Standard baud rates:
 //  300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 115200
 
-#define DEBUG
+#define DEBUG // Comment out to disable debug mode
 
 #ifdef DEBUG
   #define SERIAL_BAUD 115200
 #endif
 
+// Set the size of the LCD here
 #define LCD_COLUMNS 16
 #define LCD_ROWS 2
 
-// Setup the pushbutton pins here.
+// Setup the PUSHBUTTON pins here.
 #define PIN_PB_UP     A0
 #define PIN_PB_DOWN   A1
 #define PIN_PB_LEFT   A2
@@ -81,10 +82,10 @@
 #define PIN_PB_ENTER  12
 // How long (in milliseconds) to hold a PB before it repeats its function?
 #define REPEAT_MS     300
-// Specify the Debounce time, in milliseconds
+// Specify the Debounce time, in milliseconds. At least 20ms usually
 #define PB_DBNC_MS    30
 
-// Setup the relay pin here
+// Setup the RELAY COIL pin here
 #define PIN_RELAY 8
 
 // Setup the LED pins here.
@@ -93,13 +94,14 @@
 #define PIN_LED_R 9
 #define PIN_LED_G 10
 #define PIN_LED_B 11
-// Set the LCD backlight PWM pin here.
+// Set the LCD BACKLIGHT PWM pin here.
 #define PIN_LCD_A  6
 
 // This digital LED is on the Arduino circuit board, hard-wired to pin 13.
+// The board labels this LED as 'L'
 #define PIN_LED_L 13
 
-// How many seconds of idle time before the screen goes to sleep?
+// How many SECONDS of idle time before the screen goes to sleep?
 #define SCREEN_TIMEOUT_SEC 10
 
 
@@ -123,14 +125,19 @@
 
 
 
-/*
- * Values below this comment should not have to be changed.
- */
+//
+// Values below this comment should not have to be changed.
+///
 
-// Don't change these values
-#define RED   255, 000, 000
-#define GREEN 000, 255, 000
-#define BLUE  000, 000, 255
+// Colours, in decimal
+#define REDd   255, 000, 000
+#define GREENd 000, 255, 000
+#define BLUEd  000, 000, 255
+
+// Colours, in hex
+#define REDx   0xFF0000
+#define GREENx 0x00FF00
+#define BLUEx  0x0000FF
 
 // Don't change these values
 #define SOLID 1
@@ -140,12 +147,13 @@
 
 
 // These are EEPROM addresses.
+// ATmega328P (Arduino Nano) has 1024 bytes of EEPROM.
 // Each address is 8 bits (1 byte)
-// Offsets are in minutes, so 1 Byte is enough for 2 hours (+/- 127 min)
-// DST_last is a BOOL, so 1 Byte is more than enough
+// Offsets are in minutes, so 1 byte is enough for 2 hours (+/- 127 min)
+// DST_last is a BOOL, so 1 byte is more than enough
 // NOTE: Each EEPROM address has a MTBF of ~10,000 writes.
 // Avoid excessive writing by verifying that the code does not continuously write to an address.
-// Using the update() function will first READ and then WRITE ONLY if the value differs.
+// Using the update() function will first READ and then WRITE, but ONLY if the value differs.
 #define ADDR_DST_LAST       10
 #define ADDR_SUNRISE_OFFSET 20
 #define ADDR_SUNSET_OFFSET  30
@@ -162,44 +170,55 @@
 //  3. GLOBAL VARIABLES                      //
 ///////////////////////////////////////////////
 
-/*
- * This struct will allow 8 bools to be packed into a single byte,
- * rather than taking up 8 bytes.
- * The number after the colon is the size, in BITS
- */
-struct boolByte
-{
-    bool screen:1;
-    bool timingOut:1;
-    bool timedOut:1;
-    bool anyPbPressed:1;
-    bool anyPbHeld:1;
-    bool anyPbReleased:1;
-    bool timeAdjust:1;
-    bool timeDayLast:1;
-}__attribute__((packed));
-// make a new variable of type "boolByte"
-// address each member like so: bools.screen = 0;
-boolByte bools;
 
+// This struct will allow 8 bools to be packed into a single byte,
+//  rather than taking up 8 bytes.
+// The number after the colon is the size, in BITS of each member
+// NOTE: Using a bitfield-packed struct like this is smaller, but slower.
+
+struct {
+  bool screen				:1;
+  bool timingOut		:1;
+  bool timedOut			:1;
+  bool anyPbPressed	:1;
+  bool anyPbHeld		:1;
+  bool anyPbReleased:1;
+  bool timeAdjust		:1;
+  bool timeDayLast	:1;
+}__attribute__((packed))
+  bools;
+// Address each member like so: bools.screen = 0;
+
+
+// This keeps track of how lone a PB has been pressed,
+//  so that we can add a preset amount of time to that.
+// The PB will then have to continue to be pressed for
+//  that new total length of time to execute some code.
+// i.e. press and hold "UP" to auto-increment a value
 uint16_t pbRepeatTimer = 0;
 
-// to store the previous elapsed time
+// To store the previous elapsed milliseconds so we know how
+//  much time has elapsed between two moments.
 uint32_t screenTimeoutTimer = 0;
-// to grab a snapshot of the current time, in minutes after midnight
+// To grab a snapshot of the current time, in minutes after midnight.
+// It is much easier to convert time (HH:MM) into just minutes
+//  in order to do math on it.
 uint16_t currentMinutes = 0;
-// these will hold the sunrise/sunset, in minutes after midnight
+// These will hold today's sunrise/sunset, in minutes after midnight
 uint16_t burnabySunrise;
 uint16_t burnabySunset;
 
 // These are used to detect a change in the DST state
+// If the state changes, the RTC gets set back/forward 1 hour
+// The new state will be written to EEPROM so that the
+//  RTC isn't adjusted every time the power is cycled.
 bool burnabyDST = false;
 bool burnabyDST_last = false;
 
 
-// Sunrise time, in HH:mm 24-hour format
+// Sunrise time, in HH:mm 24-hour format (string)
 char timeBurnabySunrise[] = "00:00";
-// Sunset time, in HH:mm 24-hour format
+// Sunset time, in HH:mm 24-hour format (string)
 char timeBurnabySunset[] = "00:00";
 
 
@@ -212,15 +231,15 @@ char timeBurnabySunset[] = "00:00";
   char debugTimeSunset[] = "00:00";
 #endif
 
-// These will hold the +/- offset
-// Range is -127...+127 (approx. +/- 2 hours)
+// These will hold the actual +/- offset
+// Range is -127...+127 minutes (approx. +/- 2 hours)
 int8_t burnabySunriseOffset = 0;
-int8_t burnabySunsetOffset = 0;
-
+int8_t burnabySunsetOffset  = 0;
+// These are used to hold the offset while it is being adjusted
 int8_t burnabySunriseOffset_temp = 0;
-int8_t burnabySunsetOffset_temp = 0;
+int8_t burnabySunsetOffset_temp  = 0;
 
-// These are SIGNED because adjustment could go to (-1)
+// These are SIGNED because adjustment could go below zero temporarily
 int16_t timeYear_temp;
 int8_t  timeMonth_temp;
 int8_t  timeDay_temp;
@@ -228,28 +247,42 @@ int8_t  timeHour_temp;
 int8_t  timeMinute_temp;
 int8_t  timeSecond_temp;
 
+// Days in each month.
+// NOTE: there are 13 numbers here.
+// Months from the RTC are numbered 1-12. 0 = Error
+// Since both January and December have 31 days,
+//  the zeroth element is 31 so that "ERR" doesn't get
+//  displayed temporarily while adjusting the time.
 uint8_t daysInMonth [] = { 31,31,28,31,30,31,30,31,31,30,31,30,31 };
 
 
 
-// These can be used when displaying the date, or for debugging
-// use something like: lcd.print(dayName[now.dayOfTheWeek]) or dayNameShort[now.dayOfTheWeek]
+// These can be used when displaying the date, or for debugging.
+// Use something like: lcd.print(dayName[now.dayOfTheWeek()]) or dayNameShort[now.dayOfTheWeek()]
 char dayName[7][10] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 char dayNameShort[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
+// Months from the RTClib are numbered 1-12. 0 = invalid
 char monthName[13][10] = {"ERROR", "January", "February", "March", "April", "May", "June",
                           "July", "August", "September", "October", "November", "December"};
 char monthNameShort[13][4] = {"ERR","Jan", "Feb", "Mar", "Apr", "May", "Jun",
                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-struct two_nibbles
-{
+// This struct packs 2x 4-bit intergers into a single Byte
+struct {
  uint8_t col:4;
  uint8_t row:4;
-}__attribute__((packed));
+}__attribute__((packed))
+  cursorPos;
 
-two_nibbles cursorPos;
-two_nibbles cursorPos_prev;
+// This is used to virtually move the cursor, like when navigating the screen.
+// At the end of a block of code which moves the cursor using this variable,
+//  the outputLCD() function is called and the cursor is actually moved to that location.
+//
+// Address the position like so:
+// cursorPos.col = 10;
+// cursorPos.row = 1;
+// lcd.setCursor(cursorPos.col, cursorPos.row);
+
 
 #ifdef DEBUG
   // This timer is for serial debugging updates.
@@ -257,7 +290,7 @@ two_nibbles cursorPos_prev;
   long prevTime_Serial = 0;
   long currTime_Serial = 0;
   uint16_t interval_Serial = 2000;
-  // Preset is how many scans to average the reported scan time over
+  // Preset is how many scans over which to take the average
   uint16_t scanTimePreset = 100;
   uint16_t scanTimeCount = 0;
   uint32_t scanTimeCurr = 0;
@@ -277,21 +310,23 @@ two_nibbles cursorPos_prev;
 //  4. OBJECT CREATION                       //
 ///////////////////////////////////////////////
 
-/* Create a real-time clock object
- * There are no arguments here.
- */ 
+// Create a real-time clock object
+// This will retrieve the raw datetime from the RTC module
 RTC_DS3231 rtc;
 // Create a DateTime object. The current date and time are grabbed from this object.
 DateTime now;
 
-/* Create an LCD object.
- * Arguments: I2C address (hex), columns, rows
- */
+// Create an LCD object.
+//
+// Arguments: I2C address (hex), columns, rows
+// Typ.addr: 0x27
+// Typ.sizes: 8,2  16,2  20x4
 LiquidCrystal_I2C lcd(0x27, LCD_COLUMNS, LCD_ROWS);
 
-/* Create PWM Ramping objects
- * Argument: Pin Number
- */
+// Create PWM Ramping objects
+// 
+//
+// Argument: Pin Number
 PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
 
 /* Create the Button objects.
@@ -539,7 +574,6 @@ void setup() {
 
 // Main function: runs forever
 void loop() {
-
 
   //-------------------------//
   //------ Read Inputs ------//

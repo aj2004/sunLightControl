@@ -4,5 +4,58 @@ sunLightControl
 Table of Contents
 =====================================
 
+[Pre-Compiler]
 1. Include Libraries
+2. Define Macros (Aliases)
+3. Global Variables
+4. Object Creation
+5. Function Declarations
+[Program Start]
+6. setup() Function - Runs Once
+7. loop() Function - Runs Forever
+8. Function Prototypes
+
+
+1. Include Libraries
+	a. Arduino: to use Arduino-specific functions like digitalRead/Write and Serial.read
+	b. Dusk2Dawn: calculates the sunrise/sunset for a given date.
+	c. RTClib: handles low-level access to the Real-Time Clock module and provides date/time.
+	d. LiquidCrystal_I2C: handles low-level access to the LCD via the I2C bus.
+											- Data transfer is write-only to the LCD.
+	e. Button: handles debouncing, edge detection, on/off delays of buttons (or other digital inputs)
+	f. EEPROM: handles reading/writing the onboard EEPROM for non-volatile storage
+	g. PWM_RampLinear: allows changing a PWM output from one value to another over a given period of time
+	h. isDST_Canada: returns if DST is active or not for a given date, as per Canada's current rules
+	g. leapYear: returns if a given year is a leap year or not
+
+2. Define Macros (Aliases)
+	-- #define STRING VALUE
+	-- Anywhere that STRING is used, it is replaced with VALUE
+	-- This provides a single place to change settings/pins
+	a. #define DEBUG: if this is uncommented, DEBUG mode is enabled
+		-- "#ifdef DEBUG ... #endif" is used to block out some code used when debug mode is enabled
+	b. SERIAL_BAUD: recommended 115200 baud
+	c. LCD size
+	d. I/O pin assignments
+	e. PB debounce/repeat times
+	f. Flash Timer times
+	g. Coordinates of the locale
+	h. Constants
+	i. EEPROM addresses. 1024kB total size
+
+3. Global Variables
+	a. struct boolByte: the smallest a variable can be is the size of a single register. In this case, it's 8 bits. Even a single BOOL will use 8 bits. This packed struct allows easily using single bits within a single byte.
+	b. uintX_t is an unsigned interger of X bits
+	c. intX_t is a signed interger of X bits
+	d. bool is true/false
+	e. char is an unsigned 8-bit interger, but to make it obvious that ASCII characters are stored here. An array of chars is a string
+	f. struct two_nibbles: similar to the "boolByte" above, this packs 2x 4-bit intergers into a single byte
+
+4. Object Creation
+	-- Objects are created by using a class, which is basically a template that contains private variables and/or functions
+	a. RTC_DS3231 rtc: this is the Real-Time Clock module. The raw date/time is accessed via the 'rtc' object
+	b. DateTime now: the DateTime object allows accessing individual parts of the date and time from the rtc object
+	c. LiquidCrystal_I2C lcd: the I2C address, number of columns and rows are required to create the object
+	d. PWM_RampLinear object requires a pin number. Many such objects could be created, one for each LED that needs brightness control
+	
 
