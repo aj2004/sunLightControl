@@ -190,7 +190,7 @@ struct {
 // Address each member like so: bools.screen = 0;
 
 
-// This keeps track of how lone a PB has been pressed,
+// This keeps track of how long a PB has been pressed,
 //  so that we can add a preset amount of time to that.
 // The PB will then have to continue to be pressed for
 //  that new total length of time to execute some code.
@@ -267,12 +267,7 @@ char monthName[13][10] = {"ERROR", "January", "February", "March", "April", "May
 char monthNameShort[13][4] = {"ERR","Jan", "Feb", "Mar", "Apr", "May", "Jun",
                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-// This struct packs 2x 4-bit intergers into a single Byte
-struct {
- uint8_t col:4;
- uint8_t row:4;
-}__attribute__((packed))
-  cursorPos;
+
 
 // This is used to virtually move the cursor, like when navigating the screen.
 // At the end of a block of code which moves the cursor using this variable,
@@ -282,6 +277,13 @@ struct {
 // cursorPos.col = 10;
 // cursorPos.row = 1;
 // lcd.setCursor(cursorPos.col, cursorPos.row);
+//
+// This struct packs 2x 4-bit intergers into a single Byte
+struct {
+ uint8_t col:4;
+ uint8_t row:4;
+}__attribute__((packed))
+  cursorPos;
 
 
 #ifdef DEBUG
@@ -691,7 +693,7 @@ void loop() {
     Dusk2Dawn::min2str(debugTimeSunset, debugSunset);
   #endif
   
-  // Leap Year Calculation
+  // Leap Year Calculation for # of days February
   daysInMonth [2] = (leapYear(now.year())) ? 29 : 28;
 
   // convert the sunrise to 24-hour time for display
@@ -887,7 +889,7 @@ void loop() {
   
   }else
   if (bools.screen == 1 && cursorPos.col == 0 && pbLeft.wasPressed()){
-    // if at the left-most screen and "right" was pressed, go right
+    // if at the right-most screen and "left" was pressed, go left
     lcd.clear();
     bools.screen = 0;
     cursorPos.row = 0;
