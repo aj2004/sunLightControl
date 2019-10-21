@@ -399,7 +399,7 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
  *    Other custom colours may be defined.
  *  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
  */
-void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation);
+//void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation);
 
 
 /* Call this function to illuminate and/or flash a single LED
@@ -407,7 +407,7 @@ void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t an
  *  - Pin number of the LED 
  *  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
  */
-void outputLED_digital(uint8_t LED_pin, uint8_t animation);
+//void outputLED_digital(uint8_t LED_pin, uint8_t animation);
 
 
 /* Call this void function to print the screen to the LCD
@@ -415,7 +415,7 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation);
  *  0 = main screen
  *  1 = setup screen
  */
-void outputLCD(int LCDscreen);
+//void outputLCD(int LCDscreen);
 //TimedAction outputLCD_action = TimedAction(100,outputLCD);
 
 
@@ -960,6 +960,7 @@ void loop() {
       }
     }    
   }
+  
   // IF TIMING OUT, JUMP TO HERE
   LBL_TIMING_OUT:
 
@@ -998,7 +999,10 @@ void loop() {
       
     }
   #endif
-  outputLED_digital(PIN_LED_L, FLASH_SLOW);
+  
+
+  // Flash the onboard LED at 0.5Hz (1s on, 1s off)
+  digitalWrite(PIN_LED_L, now.second() % 2);
   
   // Control the relay/lights.
   //TODO: 
@@ -1024,19 +1028,19 @@ void loop() {
     switch (SerialKey){
 
       case 'w':
-        debugDST = true;
+        //debugDST = true;
         break;
 
       case 's':
-        debugDST = false;
+        //debugDST = false;
         break;
 
       case 'd':
-        digitalWrite(PIN_LED_R, LOW);
+        //digitalWrite(PIN_LED_R, LOW);
         break;
 
       case 'a':
-        digitalWrite(PIN_LED_R, HIGH);
+        //digitalWrite(PIN_LED_R, HIGH);
         break;
         //test_flash = false;
     }
@@ -1357,7 +1361,7 @@ void outputRelay(void){
   if (currentMinutes >= (burnabySunset + burnabySunsetOffset)){
     // Turn the lights ON.
     digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(255, 0, 255, SOLID);
+    //outputLED_RGB(255, 0, 255, SOLID);
     
   }
 
@@ -1365,7 +1369,7 @@ void outputRelay(void){
   else if (currentMinutes <= (burnabySunrise + burnabySunriseOffset)){
     // Turn the lights ON.
     digitalWrite(PIN_RELAY, HIGH);
-    outputLED_RGB(255, 0, 255, SOLID);
+    //outputLED_RGB(255, 0, 255, SOLID);
     
   }
 
@@ -1373,7 +1377,7 @@ void outputRelay(void){
   else {
     // Turn the lights OFF.
     digitalWrite(PIN_RELAY, LOW);
-    outputLED_RGB(255, 255, 0, SOLID);
+    //outputLED_RGB(255, 255, 0, SOLID);
     
   }
 
