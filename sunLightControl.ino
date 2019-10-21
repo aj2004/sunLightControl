@@ -188,6 +188,7 @@ struct {
 }__attribute__((packed))
   bools;
 // Address each member like so: bools.screen = 0;
+//howdy
 
 
 // This keeps track of how long a PB has been pressed,
