@@ -1,5 +1,6 @@
 // 2018-08-09
 // 
+// 2019-10-22: branch 'testing' created
 // 
 // Outdoor light timer based on sunrise and sunset.
 // This program is meant to control the puck lights (in the soffet) out front
