@@ -7,9 +7,8 @@
                 "/home/kevin/Sync/Programming/ard/libraries/**",
                 "/home/kevin/arduino/tools/**",
                 "/home/kevin/arduino/hardware/arduino/avr/**",
-                "/home/kevin/arduino/hardware/**",
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\**",
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**"
+                "/home/kevin/arduino/hardware/**"
+               
             ],
             "browse": {
                 "path": [
@@ -27,25 +26,30 @@
             "intelliSenseMode": "${default}",
             "forcedInclude": [
                 "/home/kevin/arduino/hardware/arduino/avr/cores/arduino/Arduino.h",
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\cores\\arduino\\Arduino.h"
+                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\cores\\arduino\\Arduino.h",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ]
         },
         {
             "name": "Win32",
+            "compilerPath": "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\bin\\avr-gcc.exe",
+            "defines": [
+                "USBCON"
+            ],
             "includePath": [
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\**",
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\**",
-                "Z:\\Program Files (x86)\\Arduino\\hardware\\**",
-                "Z:\\Sync\\Programming\\ard\\libraries\\**"
+                "W:\\Sync\\Programming\\ard\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\**"
+               
             ],
             "browse": {
                 "path": [
-                    "Z:\\Program Files (x86)\\Arduino\\hardware\\**",
-                    "Z:\\Sync\\Programming\\ard\\libraries\\**"
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\**",
+                    "W:\\Sync\\Programming\\ard\\libraries\\**"
                 ]
             },
             "forcedInclude": [
-                "C:\\Users\\kevin\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.20\\cores\\arduino\\Arduino.h"
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino\\Arduino.h"
             ]
         }
     ],
