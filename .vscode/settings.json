@@ -4,5 +4,8 @@
     
     "files.associations": {
         "xstring": "cpp"
-    }
+    },
+    "git.scanRepositories": [
+        "W:\\Sync\\Programming\\ard"
+    ]
 }
