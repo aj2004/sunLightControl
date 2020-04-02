@@ -400,7 +400,7 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 //    Other custom colours may be defined.
 //  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
 //
-//void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation);
+void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation);
 
 
 // Call this function to illuminate and/or flash a single LED
@@ -408,7 +408,7 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 //  - Pin number of the LED 
 //  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
 //
-//void outputLED_digital(uint8_t LED_pin, uint8_t animation);
+void outputLED_digital(uint8_t LED_pin, uint8_t animation);
 
 
 // Call this void function to print the screen to the LCD
@@ -416,7 +416,7 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 //  0 = main screen
 //  1 = setup screen
 //
-//void outputLCD(int LCDscreen);
+void outputLCD(int LCDscreen);
 //TimedAction outputLCD_action = TimedAction(100,outputLCD);
 
 
