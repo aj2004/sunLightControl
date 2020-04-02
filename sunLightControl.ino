@@ -7,9 +7,13 @@
 // turn on/off at the same time each day, relative to the daylight.
 //  
 //
-// *********************
-// * TABLE OF CONTENTS *
-// *********************
+
+
+///////////////////////////////////////////////
+//  TABLE OF CONTENTS                        //
+///////////////////////////////////////////////
+
+
 // 
 // 1. #includes (libraries)
 // 2. #defines
@@ -127,7 +131,7 @@
 
 //
 // Values below this comment should not have to be changed.
-///
+//
 
 // Colours, in decimal
 #define REDd   255, 000, 000
@@ -139,7 +143,7 @@
 #define GREENx 0x00FF00
 #define BLUEx  0x0000FF
 
-// Don't change these values
+// Don't change these enumerated values
 #define SOLID 1
 #define FLASH_BLIP 2
 #define FLASH_SLOW 3
@@ -173,7 +177,7 @@
 
 // This struct will allow 8 bools to be packed into a single byte,
 //  rather than taking up 8 bytes.
-// The number after the colon is the size, in BITS of each member
+// The number after the colon is the size, in BITS, of each member
 // NOTE: Using a bitfield-packed struct like this is smaller, but slower.
 
 struct {
@@ -188,7 +192,6 @@ struct {
 }__attribute__((packed))
   bools;
 // Address each member like so: bools.screen = 0;
-//howdy
 
 
 // This keeps track of how long a PB has been pressed,
@@ -332,34 +335,34 @@ LiquidCrystal_I2C lcd(0x27, LCD_COLUMNS, LCD_ROWS);
 // Argument: Pin Number
 PWM_RampLinear LCD_Backlight_PWM(PIN_LCD_A);
 
-/* Create the Button objects.
- *  
- * Make a new Button object using this class:
- * 
- * Button PB_1(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime);
- * 
- * pin = Arduino pin number of the button input
- * puEnable (true|false) = enable the internal pull-up resistor. wire the button as sinking.
- * invert (true|false) = invert the logic. if enabled, and button wired as sinking, pressing the button will return true.
- * dbTime (32-bit int) = debounce time, in milliseconds. 20 is generally a good minimum.
- * 
- * These functions are included in this library:
- * 
- * uint8_t read(); = updates the inputs. this should be called at the start of the main loop()
- * uint8_t isPressed(); = returns true if button is pressed (after debouncing)
- * uint8_t isReleased(); = returns true if button is not pressed (after debouncing)
- * uint8_t wasPressed(); = one-shot rising. returns true for one scan/loop when button pressed
- * uint8_t wasReleased(); = one-shot falling. returns true for one scan/loop when button released
- * uint8_t pressedFor(uint32_t ms); = time-delay on, in milliseconds. returns true if button held for this long
- *    Note: you can do -> if(pb.pressedFor(ms)){ some stuff; ms += repeatInterval;} to enable auto-repeat
- * uint8_t releasedFor(uint32_t ms); = time-delay off, in milliseconds. returns true if button released for this long
- *                          
- * Each button should be wired to the input pin and COM/GND.
- * Enable the pull-up resistor and inverting logic for each button
- *  to make it behave like a high-active input in the code.
- * 20ms is a good start for debounce time.
- * 
- */
+// Create the Button objects.
+//  
+// Make a new Button object using this class:
+// 
+// Button PB_1(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime);
+// 
+// pin = Arduino pin number of the button input
+// puEnable (true|false) = enable the internal pull-up resistor. wire the button as sinking.
+// invert (true|false) = invert the logic. if enabled, and button wired as sinking, pressing the button will return true.
+// dbTime (32-bit int) = debounce time, in milliseconds. 20 is generally a good minimum.
+// 
+// These functions are included in this library:
+// 
+// uint8_t read(); = updates the inputs. this should be called at the start of the main loop()
+// uint8_t isPressed(); = returns true if button is pressed (after debouncing)
+// uint8_t isReleased(); = returns true if button is not pressed (after debouncing)
+// uint8_t wasPressed(); = one-shot rising. returns true for one scan/loop when button pressed
+// uint8_t wasReleased(); = one-shot falling. returns true for one scan/loop when button released
+// uint8_t pressedFor(uint32_t ms); = time-delay on, in milliseconds. returns true if button held for this long
+//    Note: you can do -> if(pb.pressedFor(ms)){ some stuff; ms += repeatInterval;} to enable auto-repeat
+// uint8_t releasedFor(uint32_t ms); = time-delay off, in milliseconds. returns true if button released for this long
+//                          
+// Each button should be wired to the input pin and COM/GND.
+// Enable the pull-up resistor and inverting logic for each button
+//  to make it behave like a high-active input in the code.
+// 20ms is a good start for debounce time.
+// 
+//
 
 //    |Name  | Pin Number  |Pull Up|Invrt|Debnc Time|
 //----|------|-------------|-------|-----|----------|
@@ -369,11 +372,11 @@ Button pbLeft (PIN_PB_LEFT,   true, true, PB_DBNC_MS);
 Button pbRight(PIN_PB_RIGHT,  true, true, PB_DBNC_MS);
 Button pbEnter(PIN_PB_ENTER,  true, true, PB_DBNC_MS);
 
-/* Create a Dusk2Dawn object. (for sunrise/sunset times)
- * Arguments: latitude, longitude, UTC offset
- * PST = UTC-8:00
- * 
- */
+// Create a Dusk2Dawn object. (for sunrise/sunset times)
+// Arguments: latitude, longitude, UTC offset
+// PST = UTC-8:00
+// 
+//
 Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 
 
@@ -381,40 +384,38 @@ Dusk2Dawn burnaby(BURNABY_LATITUDE, BURNABY_LONGITUDE, BURNABY_UTC_OFFSET);
 
 
 
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
-//                                          \\
-//  5. FUNCTION DECLARATIONS                \\
-//                                          \\
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+///////////////////////////////////////////////
+//  5. FUNCTION DECLARATIONS                 //
+///////////////////////////////////////////////
 
 
 
 
-/* Call this function to illuminate and/or flash the LED(s)
- * Arguments:
- *  - colour (RED, GREEN, BLUE)
- *    RED   = 255, 0, 0
- *    GREEN = 0, 255, 0
- *    BLUE  = 0, 0, 255
- *    Other custom colours may be defined.
- *  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
- */
+// Call this function to illuminate and/or flash the LED(s)
+// Arguments:
+//  - colour (RED, GREEN, BLUE)
+//    RED   = 255, 0, 0
+//    GREEN = 0, 255, 0
+//    BLUE  = 0, 0, 255
+//    Other custom colours may be defined.
+//  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
+//
 //void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation);
 
 
-/* Call this function to illuminate and/or flash a single LED
- * Arguments:
- *  - Pin number of the LED 
- *  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
- */
+// Call this function to illuminate and/or flash a single LED
+// Arguments:
+//  - Pin number of the LED 
+//  - animation (SOLID, FLASH_BLIP, FLASH_SLOW, FLASH_FAST)
+//
 //void outputLED_digital(uint8_t LED_pin, uint8_t animation);
 
 
-/* Call this void function to print the screen to the LCD
- * Argument: screen number
- *  0 = main screen
- *  1 = setup screen
- */
+// Call this void function to print the screen to the LCD
+// Argument: screen number
+//  0 = main screen
+//  1 = setup screen
+//
 //void outputLCD(int LCDscreen);
 //TimedAction outputLCD_action = TimedAction(100,outputLCD);
 
@@ -438,17 +439,15 @@ void outputRelay(void);
 
 
 
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
-//                                          \\
-//  6. setup() -- MAIN FUNCTION (runs once) \\
-//                                          \\
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+///////////////////////////////////////////////
+//  6. setup() -- MAIN FUNCTION (runs once)  //
+///////////////////////////////////////////////
 
-/* setup() function: runs once
- * 1. Init Serial, LCD, RTC, I/O, 
- * 
- * 
- */
+// setup() function: runs once
+// 1. Init Serial, LCD, RTC, I/O, 
+// 
+// 
+//
 
 void setup() {
 
@@ -462,11 +461,11 @@ void setup() {
   #endif
 
   // Setup the Input pins
-  /*
-   * NOTE: These lines of code are redundant.
-   * The Button library takes care of the pinModes.
-   * This code is being left here to make it more obvious. 
-   */
+  //
+  // NOTE: These lines of code are redundant.
+  // The Button library takes care of the pinModes.
+  // This code is being left here to make it more obvious. 
+  //
   pinMode(PIN_PB_UP,    INPUT_PULLUP);
   pinMode(PIN_PB_DOWN,  INPUT_PULLUP);
   pinMode(PIN_PB_LEFT,  INPUT_PULLUP);
@@ -474,17 +473,17 @@ void setup() {
   pinMode(PIN_PB_ENTER, INPUT_PULLUP);
 
   // Setup the Output pins
-  /* 
-   * It is recommended to use digitalWrite(PIN, STATE) to put the outputs
-   * into a known state before the main loop() begins.
-   */
+  // 
+  // It is recommended to use digitalWrite(PIN, STATE) to put the outputs
+  // into a known state before the main loop() begins.
+  //
   pinMode(PIN_RELAY, OUTPUT);
-  /* The relay contacts will be wired N.C. so if this program/circuit fails, the original
-   *  timer unit (in series with this system) can still control the lights
-   * The output is configured as a CURRENT SINK. This "double-negative" means that:
-   *  - Setting the output HIGH means the lights will be ON (relay coil is off, NC contacts closed)
-   *  - Setting the output LOW means the lights will be OFF (relay coil is on, NC contacts open)
-   */
+  // The relay contacts will be wired N.C. so if this program/circuit fails, the original
+  //  timer unit (in series with this system) can still control the lights
+  // The output is configured as a CURRENT SINK. This "double-negative" means that:
+  //  - Setting the output HIGH means the lights will be ON (relay coil is off, NC contacts closed)
+  //  - Setting the output LOW means the lights will be OFF (relay coil is on, NC contacts open)
+  //
   digitalWrite(PIN_RELAY, LOW);
   
 
@@ -569,11 +568,9 @@ void setup() {
 
 
                         
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
-//                                          \\
-//  7. loop() -- MAIN FUNCTION              \\
-//                                          \\
-///////////////////////\\\\\\\\\\\\\\\\\\\\\\\
+///////////////////////////////////////////////
+//  7. loop() -- MAIN FUNCTION               //
+///////////////////////////////////////////////
 
 // Main function: runs forever
 void loop() {
@@ -618,10 +615,10 @@ void loop() {
   //--- Time Calculations ---//
   //-------------------------//
 
-  /* Grab the current time.
-   * This avoids the current time changing
-   *  in the middle of the loop. 
-   */
+  // Grab the current time.
+  // This avoids the current time changing
+  //  in the middle of the loop. 
+  //
   
   now = rtc.now();
 
@@ -630,10 +627,10 @@ void loop() {
   // Convert the current time into minutes after midnight
   currentMinutes = (now.hour()*60) + now.minute();  
 
-  /* Grab the sunrise and sunset for Burnaby using the current date. 
-   * Available methods are sunrise() and sunset(). Arguments are year, month,
-   *  day, and if Daylight Saving Time is in effect.
-   */
+  // Grab the sunrise and sunset for Burnaby using the current date. 
+  // Available methods are sunrise() and sunset(). Arguments are year, month,
+  //  day, and if Daylight Saving Time is in effect.
+  //
   burnabyDST = isDST_Canada(now.month(), now.day(), now.dayOfTheWeek());
   burnabySunrise  = burnaby.sunrise(now.year(), now.month(), now.day(), burnabyDST);
   burnabySunset   = burnaby.sunset(now.year(), now.month(), now.day(), burnabyDST);
@@ -1081,16 +1078,16 @@ void loop() {
 
 
 
-////////////////////////////////////////////////
-//  8. FUNCTION PROTOTYPES                    //
-////////////////////////////////////////////////
+///////////////////////////////////////////////
+//  8. FUNCTION PROTOTYPES                   //
+///////////////////////////////////////////////
 
 
 void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t animation){
-  /*
-    Use this function to flash an RGB LED.
-    Arguments: RGB value (red byte, green byte, blue byte,) and animation
-  */
+  //
+  // Use this function to flash an RGB LED.
+  // Arguments: RGB value (red byte, green byte, blue byte,) and animation
+  //
   uint32_t flashTimer = 0;
 
   switch (animation){
@@ -1157,11 +1154,11 @@ void outputLED_RGB(uint8_t val_red, uint8_t val_grn, uint8_t val_blu, uint8_t an
 
 
 void outputLED_digital(uint8_t LED_pin, uint8_t animation){
-  /*
-   * Use this function to flash a single LED.
-   * Arguments: LED pin, and animation
-   * 
-   */
+  //
+  // Use this function to flash a single LED.
+  // Arguments: LED pin, and animation
+  //
+  //
   uint32_t flashTimer = 0;
 
   switch (animation){
@@ -1195,26 +1192,26 @@ void outputLED_digital(uint8_t LED_pin, uint8_t animation){
 
 void outputLCD(int LCDscreen){
 
-  /* LCD DISPLAY:
-   * The LCD is a '1602': 16 characters/columns, 2 rows
-   * 
-   * Main Screen:
-   *        0123456789012345
-   * Line0: MMM.DD  HH:mm:ss (Current month/day, and time. Adjustable) TODO
-   * Line1: R.HH:mm  S.HH:mm (Today's Sunrise and Sunset. Calculated)
-   * 
-   * Setup Screen: TODO
-   *        0123456789012345
-   * Line0: >Off: Rise +01m (Turn lights off at Sunrise +/- XX minutes. Adjustable)
-   * Line1: >On : Set  -01m (Turn lights on at Sunset +/- XX minutes. Adjustable)
-   * 
-   * Avoid using 'lcd.clear()' because it clears the whole screen and causes flicker.
-   * Instead, overwrite existing characters and use 'lcd.write(254)' to print a blank character.
-   * 
-   * lcd.setCursor(Column,Row); to move the cursor.
-   * lcd.home(); to put the cursor at 0,0 (top-left).
-   * lcd.print(variable/string); to print something. Data types cannot be combined.
-   */ 
+  // LCD DISPLAY:
+  // The LCD is a '1602': 16 characters/columns, 2 rows
+  // 
+  // Main Screen:
+  //        0123456789012345
+  // Line0: MMM.DD  HH:mm:ss (Current month/day, and time. Adjustable) TODO
+  // Line1: R.HH:mm  S.HH:mm (Today's Sunrise and Sunset. Calculated)
+  // 
+  // Setup Screen: TODO
+  //        0123456789012345
+  // Line0: >Off: Rise +01m (Turn lights off at Sunrise +/- XX minutes. Adjustable)
+  // Line1: >On : Set  -01m (Turn lights on at Sunset +/- XX minutes. Adjustable)
+  // 
+  // Avoid using 'lcd.clear()' because it clears the whole screen and causes flicker.
+  // Instead, overwrite existing characters and use 'lcd.write(254)' to print a blank character.
+  // 
+  // lcd.setCursor(Column,Row); to move the cursor.
+  // lcd.home(); to put the cursor at 0,0 (top-left).
+  // lcd.print(variable/string); to print something. Data types cannot be combined.
+  // 
 
   
   uint8_t _LCDyear    = (bools.timeAdjust) ? timeYear_temp % 2000   : now.year() % 2000;
@@ -1348,14 +1345,14 @@ void outputLCD(int LCDscreen){
 
 void outputRelay(void){
 
-  /* Relay Output Logic:
-   * 
-   * The outdoor lights are controlled by the relay.
-   * Setting the output HIGH turns the lights ON and vice versa.
-   * The lights will turn ON at sunset, +/- the adjustable offset.
-   * The lights will turn OFF at sunrise, +/- the adjustable offset.
-   * 
-   */
+  // Relay Output Logic:
+  // 
+  // The outdoor lights are controlled by the relay.
+  // Setting the output HIGH turns the lights ON and vice versa.
+  // The lights will turn ON at sunset, +/- the adjustable offset.
+  // The lights will turn OFF at sunrise, +/- the adjustable offset.
+  // 
+  //
 
   // If the current time is after sunset...
   if (currentMinutes >= (burnabySunset + burnabySunsetOffset)){
@@ -1389,29 +1386,29 @@ void outputRelay(void){
 void outputSerialDebug(void){
   
     
-    /* Main Debug Serial Message:
-     * 
-     * This block of Serial.print() statements will output some useful information
-     * to the serial port. The built-in Arduino serial monitor, or a program such
-     * as PuTTY, may be used to connect to the COM port with 115200 baud.
-     * 
-     * Additional Serial.print() statements may be added after the first if() statement.
-     * This serial message will be printed every X milliseconds, defined by: interval_Serial
-     * 
-     */
+    // Main Debug Serial Message:
+    // 
+    // This block of Serial.print() statements will output some useful information
+    // to the serial port. The built-in Arduino serial monitor, or a program such
+    // as PuTTY, may be used to connect to the COM port with 115200 baud.
+    // 
+    // Additional Serial.print() statements may be added after the first if() statement.
+    // This serial message will be printed every X milliseconds, defined by: interval_Serial
+    // 
+    //
 
     // grab the current elapsed milliseconds
     currTime_Serial = millis();
 
-    /* if the elapsed program time since the last time this block
-     * of code was run is greater than the interval, run the code
-     */
+    // if the elapsed program time since the last time this block
+    // of code was run is greater than the interval, run the code
+    //
     //if ((currTime_Serial - prevTime_Serial) >= interval_Serial){
 
       // reset the last time the code was run to the current time
       prevTime_Serial = currTime_Serial;
       
-      /*Serial.println("============================");
+      //Serial.println("============================");
       //DEBUG: print the current date/time
       Serial.println("Current date/time:");
         Serial.print(dayNameShort[now.dayOfTheWeek()]);
@@ -1460,7 +1457,7 @@ void outputSerialDebug(void){
       Serial.println(bools.timingOut);
       Serial.print("timed out: ");
       Serial.println(bools.timedOut);
-      Serial.println();*/
+      Serial.println();
 
       
     //}
