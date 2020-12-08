@@ -7,8 +7,13 @@
                 "/home/kevin/Sync/Programming/ard/libraries/**",
                 "/home/kevin/arduino/tools/**",
                 "/home/kevin/arduino/hardware/arduino/avr/**",
-                "/home/kevin/arduino/hardware/**"
-               
+                "/home/kevin/arduino/hardware/**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files (x86)\\Arduino\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
+                "D:\\Kevin\\Sync\\Documents\\Arduino\\libraries\\**",
+                "D:\\Kevin\\Sync\\Programming\\ard\\libraries\\**"
             ],
             "browse": {
                 "path": [
@@ -37,15 +42,18 @@
                 "USBCON"
             ],
             "includePath": [
-                "W:\\Sync\\Programming\\ard\\libraries\\**",
+                "D:\\Kevin\\Sync\\Documents\\Arduino\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\libraries\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "D:\\Kevin\\Sync\\Programming\\ard\\libraries\\**",
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\**"
-               
             ],
             "browse": {
                 "path": [
                     "C:\\Program Files (x86)\\Arduino\\hardware\\**",
-                    "W:\\Sync\\Programming\\ard\\libraries\\**"
+                    "D:\\Kevin\\Sync\\Programming\\ard\\libraries\\**"
                 ]
             },
             "forcedInclude": [
